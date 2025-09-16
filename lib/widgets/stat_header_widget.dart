@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class StatHeaderWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.all(20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatCard('Total Anggota', '5', Icons.people),
-          _buildStatCard('Sudah Bayar', '3', Icons.check_circle),
-          _buildStatCard('Belum Bayar', '2', Icons.pending),
-        ],
+      child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: ApiService.getMembers(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          } else {
+            final members = snapshot.data!;
+
+            // Hitung total anggota dan status bayar
+            final totalAnggota = members.length;
+            final sudahBayar = members.where((m) => (m['amount'] ?? 0) > 0).length;
+            final belumBayar = totalAnggota - sudahBayar;
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatCard('Total Anggota', '$totalAnggota', Icons.people),
+                _buildStatCard('Sudah Bayar', '$sudahBayar', Icons.check_circle),
+                _buildStatCard('Belum Bayar', '$belumBayar', Icons.pending),
+              ],
+            );
+          }
+        },
       ),
     );
   }

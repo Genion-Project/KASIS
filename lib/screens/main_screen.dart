@@ -4,13 +4,15 @@ import 'add_transaction_screen.dart';
 import 'members_screen.dart';
 
 class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
   @override
   _MainScreenState createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-  
+
   final List<Widget> _screens = [
     HomeScreen(),
     AddTransactionScreen(),
@@ -20,8 +22,12 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_currentIndex],
-      floatingActionButton: Container(
+      // IndexedStack menjaga state tiap screen tetap ada
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      floatingActionButton: SizedBox(
         width: 60,
         height: 60,
         child: FloatingActionButton(
@@ -32,7 +38,7 @@ class _MainScreenState extends State<MainScreen> {
           },
           backgroundColor: Colors.blue[600],
           elevation: 8,
-          child: Icon(Icons.add, size: 30, color: Colors.white),
+          child: const Icon(Icons.add, size: 30, color: Colors.white),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
@@ -40,70 +46,42 @@ class _MainScreenState extends State<MainScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        shape: CircularNotchedRectangle(),
+        shape: const CircularNotchedRectangle(),
         notchMargin: 8,
         elevation: 8,
-        child: Container(
+        child: SizedBox(
           height: 70,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _currentIndex = 0;
-                  });
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.home,
-                      color: _currentIndex == 0 ? Colors.blue[600] : Colors.grey[600],
-                      size: 28,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Home',
-                      style: TextStyle(
-                        color: _currentIndex == 0 ? Colors.blue[600] : Colors.grey[600],
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(width: 80), // Space for FAB
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _currentIndex = 2;
-                  });
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.people,
-                      color: _currentIndex == 2 ? Colors.blue[600] : Colors.grey[600],
-                      size: 28,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Anggota',
-                      style: TextStyle(
-                        color: _currentIndex == 2 ? Colors.blue[600] : Colors.grey[600],
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _buildNavItem(Icons.home, 'Home', 0),
+              const SizedBox(width: 80), // Space untuk FAB
+              _buildNavItem(Icons.people, 'Anggota', 2),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: isSelected ? Colors.blue[600] : Colors.grey[600], size: 28),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.blue[600] : Colors.grey[600],
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

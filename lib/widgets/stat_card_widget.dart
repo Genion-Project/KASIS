@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class StatCardWidget extends StatelessWidget {
   @override
@@ -35,12 +36,32 @@ class StatCardWidget extends StatelessWidget {
             ],
           ),
           SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildStatItem('Pemasukan', 'Rp 3.200.000', Colors.green),
-              _buildStatItem('Pengeluaran', 'Rp 850.000', Colors.red),
-            ],
+          FutureBuilder<Map<String, dynamic>>(
+            future: ApiService.getLaporan(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              } else {
+                final laporan = snapshot.data!;
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildStatItem(
+                      'Pemasukan',
+                      'Rp ${laporan['total_pemasukan']}',
+                      Colors.green,
+                    ),
+                    _buildStatItem(
+                      'Pengeluaran',
+                      'Rp ${laporan['total_pengeluaran']}',
+                      Colors.red,
+                    ),
+                  ],
+                );
+              }
+            },
           ),
         ],
       ),

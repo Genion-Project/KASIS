@@ -4,6 +4,12 @@ import '../widgets/stat_card_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/activity_item_widget.dart';
 import '../pages/login_page.dart'; 
+import '../services/api_service.dart';
+import 'package:bendahara_app/pages/pemasukan_page.dart';
+import 'package:bendahara_app/pages/pengeluaran_page.dart';
+import 'package:bendahara_app/pages/riwayat_page.dart';
+
+
 
 
 class HomeScreen extends StatelessWidget {
@@ -112,28 +118,31 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Total Saldo',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Rp 2.350.000',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
+                        FutureBuilder<Map<String, dynamic>>(
+                          future: ApiService.getLaporan(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return Center(child: CircularProgressIndicator());
+                            } else if (snapshot.hasError) {
+                              return Text('Error: ${snapshot.error}');
+                            } else {
+                              final laporan = snapshot.data!;
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Total Saldo',
+                                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Rp ${laporan['saldo']}',
+                                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              );
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -176,7 +185,7 @@ class HomeScreen extends StatelessWidget {
             // Quick Actions with enhanced styling
             Container(
               color: Colors.blue[700],
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 30),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -184,16 +193,34 @@ class HomeScreen extends StatelessWidget {
                     icon: Icons.add_circle_outline,
                     label: 'Pemasukan',
                     color: Colors.green[500]!,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => PemasukanPage()),
+                      );
+                    },
                   ),
                   QuickActionWidget(
                     icon: Icons.remove_circle_outline,
                     label: 'Pengeluaran',
                     color: Colors.red[500]!,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => PengeluaranPage()),
+                      );
+                    },
                   ),
                   QuickActionWidget(
                     icon: Icons.history_outlined,
                     label: 'Riwayat',
                     color: Colors.purple[500]!,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => RiwayatPage()),
+                      );
+                    },
                   ),
                 ],
               ),
