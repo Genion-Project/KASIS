@@ -17,21 +17,28 @@ class AnggotaItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color statusColor;
-    String statusText;
     
+    
+    Icon statusIcon;
+
     if (totalPoin == 0) {
       statusColor = Colors.green[600]!;
-      statusText = 'Baik';
-    } else if (totalPoin <= 40) {
+      statusIcon = Icon(Icons.check_circle, color: statusColor, size: 22);
+    } else if (totalPoin <= 50) {
       statusColor = Colors.yellow[600]!;
-      statusText = 'Tindak Lanjut';
+      statusIcon = Icon(Icons.warning_amber_rounded, color: statusColor, size: 22);
     } else if (totalPoin <= 80) {
       statusColor = Colors.orange[600]!;
-      statusText = 'Sanksi';
-    } else {
+      statusIcon = Icon(Icons.report_problem, color: statusColor, size: 22);
+    } else if (totalPoin <= 95) {
       statusColor = Colors.red[600]!;
-      statusText = 'Buruk';
+      statusIcon = Icon(Icons.cancel_rounded, color: statusColor, size: 22);
+    } else {
+      statusColor = Colors.black;
+      statusIcon = Icon(Icons.block, color: statusColor, size: 22);
     }
+
+
     
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -86,6 +93,7 @@ class AnggotaItem extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       nama,
@@ -102,60 +110,49 @@ class AnggotaItem extends StatelessWidget {
                     Row(
                       children: [
                         // Badge Kelas
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[50],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            kelas,
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Badge Status
-                        if (statusText.isNotEmpty)
-                          Container(
+                        Flexible(
+                          child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
+                              color: Colors.blue[50],
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              statusText,
+                              kelas,
                               style: TextStyle(
-                                color: statusColor,
+                                color: Colors.blue[700],
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Status Icon
+                        statusIcon,
                       ],
                     ),
                   ],
                 ),
               ),
               
+              const SizedBox(width: 12),
+              
               // Stats Section
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[200]!, width: 1),
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       '$jumlahPelanggaran',

@@ -99,6 +99,7 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
                           'Rekap Anggota',
@@ -108,6 +109,8 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
                             color: Colors.white,
                             letterSpacing: 0.3,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -116,10 +119,13 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
                             fontSize: 13,
                             color: Colors.white70,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
@@ -129,6 +135,8 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
                       tooltip: 'Tutup',
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(),
                     ),
                   ),
                 ],
@@ -192,15 +200,20 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
                     border: Border.all(color: Colors.blue.shade200),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.filter_list_rounded, size: 18, color: Colors.blue.shade700),
                       const SizedBox(width: 8),
-                      Text(
-                        'Ditemukan ${filtered.length} hasil',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.blue.shade700,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          'Ditemukan ${filtered.length} hasil',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.blue.shade700,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -283,15 +296,20 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.info_outline_rounded, size: 16, color: Colors.grey.shade600),
                   const SizedBox(width: 8),
-                  Text(
-                    'Data diperbarui secara real-time',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
+                  Flexible(
+                    child: Text(
+                      'Data diperbarui secara real-time',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
