@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../screens/rekap/rekap_anggota_dialog.dart';
 import '../screens/rekap/input_pelanggaran_dialog.dart';
 import '../widgets/rekap/header_summary.dart';
 import '../widgets/rekap/filter_section.dart';
 import '../widgets/rekap/filter_tabs.dart';
 import '../widgets/rekap/pelanggaran_card.dart';
+import '../services/api_service.dart';
 
 class RiwayatPage extends StatefulWidget {
   const RiwayatPage({super.key});
@@ -17,6 +19,14 @@ class _RiwayatPageState extends State<RiwayatPage> {
   DateTimeRange? selectedDateRange;
   String activeFilter = 'Semua';
   final PageController _pageController = PageController();
+  late Future<List<Map<String, dynamic>>> pelanggaranFuture;
+  final ApiService apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    pelanggaranFuture = apiService.getPelanggaran();
+  }
 
   @override
   void dispose() {
@@ -46,6 +56,10 @@ class _RiwayatPageState extends State<RiwayatPage> {
               ),
             ),
           );
+          // refresh data
+          setState(() {
+            pelanggaranFuture = apiService.getPelanggaran();
+          });
         },
       ),
     );
@@ -61,8 +75,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
     setState(() {
       activeFilter = filter;
     });
-    
-    // Pindah ke halaman yang sesuai
     if (filter == 'Semua') {
       _pageController.animateToPage(
         0,
@@ -84,6 +96,15 @@ class _RiwayatPageState extends State<RiwayatPage> {
     });
   }
 
+  // Filter data hanya untuk tanggal hari ini
+  List<Map<String, dynamic>> _filterHariIni(List<Map<String, dynamic>> data) {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return data.where((item) {
+      final tanggal = item['tanggal'] ?? '';
+      return tanggal.startsWith(today);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,17 +122,46 @@ class _RiwayatPageState extends State<RiwayatPage> {
             activeFilter: activeFilter,
             onFilterChanged: _onFilterChanged,
           ),
-          
           Expanded(
             child: PageView(
               controller: _pageController,
               onPageChanged: _onPageChanged,
               children: [
                 // Halaman Semua Pelanggaran
-                _buildSemuaPelanggaranPage(),
-                
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: pelanggaranFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text('Data pelanggaran kosong'));
+                    }
+
+                    final dataHariIni = _filterHariIni(snapshot.data!);
+
+                    return _buildSemuaPelanggaranPage(dataHariIni);
+                  },
+                ),
+
                 // Halaman Rekap
-                _buildRekapPage(),
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: pelanggaranFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text('Data rekap kosong'));
+                    }
+
+                    final dataHariIni = _filterHariIni(snapshot.data!);
+
+                    return _buildRekapPage(dataHariIni);
+                  },
+                ),
               ],
             ),
           ),
@@ -120,96 +170,66 @@ class _RiwayatPageState extends State<RiwayatPage> {
     );
   }
 
-  // Halaman Semua Pelanggaran
-  Widget _buildSemuaPelanggaranPage() {
+  Widget _buildSemuaPelanggaranPage(List<Map<String, dynamic>> data) {
     return Column(
       children: [
-        const HeaderSummary(
-          totalPelanggaran: 12,
-          pelanggaranBulanIni: 5,
-          pelanggaranMingguIni: 2,
+        HeaderSummary(
+          totalPelanggaran: data.length,
+          pelanggaranBulanIni: data.length,
+          pelanggaranMingguIni: data.length,
         ),
-        
         FilterSection(
           selectedDateRange: selectedDateRange,
           onRekapPressed: _showRekapAnggotaDialog,
           onInputPressed: _showInputDialog,
           onResetFilter: _resetFilter,
         ),
-
         const SizedBox(height: 8),
-
         Expanded(
-          child: ListView(
+          child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            children: [
-              PelanggaranCard(
-                nama: 'Ahmad Rizki Pratama',
-                kelas: 'XII IPA 1',
-                tanggal: '28 Sep 2025',
-                waktu: '07:15',
-                jenisPelanggaran: 'Tidak Memakai Dasi',
-                poin: 5,
-                keterangan: 'Dasi tertinggal di rumah',
-                icon: Icons.style,
+            itemCount: data.length,
+            itemBuilder: (context, index) {
+              final item = data[index];
+              return PelanggaranCard(
+                nama: item['nama'] ?? '-',
+                kelas: item['kelas'] ?? '-',
+                tanggal: item['tanggal'] ?? '-',
+                waktu: item['waktu'] ?? '-',
+                jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
+                poin: item['poin']?.toInt() ?? 0,
+                keterangan: item['keterangan'] ?? '-',
+                icon: Icons.warning_amber_outlined,
                 color: Colors.amber[700]!,
-              ),
-              PelanggaranCard(
-                nama: 'Siti Nurhaliza',
-                kelas: 'XI IPS 2',
-                tanggal: '27 Sep 2025',
-                waktu: '07:30',
-                jenisPelanggaran: 'Sepatu Tidak Sesuai',
-                poin: 10,
-                keterangan: 'Memakai sepatu warna putih',
-                icon: Icons.shopping_bag,
-                color: Colors.red[600]!,
-              ),
-              PelanggaranCard(
-                nama: 'Budi Santoso',
-                kelas: 'XII IPA 2',
-                tanggal: '25 Sep 2025',
-                waktu: '07:10',
-                jenisPelanggaran: 'Rambut Tidak Rapi',
-                poin: 5,
-                keterangan: 'Rambut melebihi batas ketentuan',
-                icon: Icons.face,
-                color: Colors.amber[700]!,
-              ),
-              PelanggaranCard(
-                nama: 'Dewi Lestari',
-                kelas: 'X IPA 3',
-                tanggal: '23 Sep 2025',
-                waktu: '07:45',
-                jenisPelanggaran: 'Tidak Memakai Ikat Pinggang',
-                poin: 5,
-                keterangan: 'Ikat pinggang tidak dipakai saat upacara',
-                icon: Icons.straighten,
-                color: Colors.amber[700]!,
-              ),
-              PelanggaranCard(
-                nama: 'Eko Prasetyo',
-                kelas: 'XI IPS 1',
-                tanggal: '20 Sep 2025',
-                waktu: '07:20',
-                jenisPelanggaran: 'Baju Tidak Dimasukkan',
-                poin: 5,
-                keterangan: 'Baju keluar dari celana saat pembelajaran',
-                icon: Icons.checkroom,
-                color: Colors.amber[700]!,
-              ),
-            ],
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  // Halaman Rekap
-  Widget _buildRekapPage() {
+  Widget _buildRekapPage(List<Map<String, dynamic>> data) {
+    // buat rekap per kelas
+    final Map<String, Map<String, int>> rekapKelas = {};
+    for (var item in data) {
+      final kelas = item['kelas'] ?? 'Tidak diketahui';
+      if (!rekapKelas.containsKey(kelas)) {
+        rekapKelas[kelas] = {
+          'total_siswa': 1,
+          'total_pelanggaran': item['poin']?.toInt() ?? 0
+        };
+      } else {
+        rekapKelas[kelas]!['total_siswa'] =
+            rekapKelas[kelas]!['total_siswa']! + 1;
+        rekapKelas[kelas]!['total_pelanggaran'] =
+           (rekapKelas[kelas]!['total_pelanggaran']! + (item['poin']?.toInt() ?? 0)).toInt();
+      }
+    }
+
     return Column(
       children: [
-        // Header untuk halaman Rekap
+        // Header
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -258,10 +278,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue[700],
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -269,40 +286,22 @@ class _RiwayatPageState extends State<RiwayatPage> {
           ),
         ),
 
-        // Statistik ringkas
+        // List rekap
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              _buildRekapCard(
-                title: 'XII IPA 1',
-                totalSiswa: 32,
-                totalPelanggaran: 8,
+            children: rekapKelas.entries.map((entry) {
+              final kelas = entry.key;
+              final totalSiswa = entry.value['total_siswa']!;
+              final totalPelanggaran = entry.value['total_pelanggaran']!;
+              return _buildRekapCard(
+                title: kelas,
+                totalSiswa: totalSiswa,
+                totalPelanggaran: totalPelanggaran,
                 icon: Icons.school,
                 color: Colors.blue[700]!,
-              ),
-              _buildRekapCard(
-                title: 'XI IPS 2',
-                totalSiswa: 30,
-                totalPelanggaran: 5,
-                icon: Icons.school,
-                color: Colors.green[700]!,
-              ),
-              _buildRekapCard(
-                title: 'X IPA 3',
-                totalSiswa: 28,
-                totalPelanggaran: 12,
-                icon: Icons.school,
-                color: Colors.orange[700]!,
-              ),
-              _buildRekapCard(
-                title: 'XII IPA 2',
-                totalSiswa: 31,
-                totalPelanggaran: 6,
-                icon: Icons.school,
-                color: Colors.purple[700]!,
-              ),
-            ],
+              );
+            }).toList(),
           ),
         ),
       ],
@@ -333,53 +332,33 @@ class _RiwayatPageState extends State<RiwayatPage> {
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 28,
-              ),
+              child: Icon(icon, color: color, size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
+                  Text(title,
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87)),
                   const SizedBox(height: 4),
-                  Text(
-                    '$totalSiswa siswa',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
-                  ),
+                  Text('$totalSiswa siswa',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                 ],
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '$totalPelanggaran',
-                style: TextStyle(
-                  color: Colors.red[700],
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+                  color: Colors.red[50], borderRadius: BorderRadius.circular(20)),
+              child: Text('$totalPelanggaran',
+                  style: TextStyle(
+                      color: Colors.red[700],
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
             ),
           ],
         ),

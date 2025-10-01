@@ -53,7 +53,7 @@ class FilterSection extends StatelessWidget {
                 onPressed: onRekapPressed,
                 icon: const Icon(Icons.people_alt, size: 20),
                 label: const Text(
-                  'Rekap',
+                  'Cari cepat',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 style: ElevatedButton.styleFrom(

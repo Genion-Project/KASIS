@@ -1,4 +1,4 @@
-package com.example.bendahara_app
+package com.genion.kasis
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,6 +1,7 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.genion.kasis">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="bendahara_app"
+        android:label="Kasis"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'https://serururu.pythonanywhere.com/'; // ganti sesuai server
+  static const String baseUrl = 'https://serururu.pythonanywhere.com'; // ganti sesuai server
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/login');
@@ -17,6 +17,32 @@ class ApiService {
     } else {
       // jika gagal login
       throw Exception(jsonDecode(response.body)['error'] ?? 'Login gagal');
+    }
+  }
+
+static Future<void> addPelanggaran(Map<String, dynamic> data) async {
+  final response = await http.post(
+    Uri.parse("$baseUrl/pelanggaran"),
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode(data),
+  );
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    return; // sukses, biar widget yg kasih feedback
+  } else {
+    throw Exception("Gagal Menyimpan, Terjadi Kesalahan");
+  }
+
+}
+
+Future<List<Map<String, dynamic>>> getPelanggaran() async {
+    final response = await http.get(Uri.parse('$baseUrl/pelanggaran'));
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return List<Map<String, dynamic>>.from(data);
+    } else {
+      throw Exception("Gagal mengambil data pelanggaran");
     }
   }
 
@@ -138,6 +164,40 @@ static Future<void> bayarKas({
 
     if (response.statusCode != 200) {
       throw Exception('Gagal membayar: ${response.body}');
+    }
+  }
+
+    /// Ambil rekap pelanggaran (jumlah per siswa + total poin)
+  static Future<List<Map<String, dynamic>>> getRekapPelanggaran() async {
+    final url = Uri.parse("$baseUrl/pelanggaran");
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+
+      // Kelompokkan data per siswa
+      Map<String, Map<String, dynamic>> grouped = {};
+      for (var item in data) {
+        final nama = item["nama"];
+        final kelas = item["kelas"];
+        final poin = item["poin"] ?? 0;
+
+        final key = "$nama-$kelas";
+        if (!grouped.containsKey(key)) {
+          grouped[key] = {
+            "nama": nama,
+            "kelas": kelas,
+            "jumlah": 0,
+            "poin": 0,
+          };
+        }
+        grouped[key]!["jumlah"] += 1;
+        grouped[key]!["poin"] += poin;
+      }
+
+      return grouped.values.toList();
+    } else {
+      throw Exception("Gagal memuat data pelanggaran");
     }
   }
 
