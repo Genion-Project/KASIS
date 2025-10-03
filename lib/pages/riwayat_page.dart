@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../screens/rekap/rekap_anggota_dialog.dart';
 import '../screens/rekap/input_pelanggaran_dialog.dart';
-import 'detail_kelas_page.dart'; // Ubah import ini - file ada di folder yang sama (pages)
+import 'detail_kelas_page.dart';
 import '../widgets/rekap/header_summary.dart';
 import '../widgets/rekap/filter_section.dart';
 import '../widgets/rekap/filter_tabs.dart';
@@ -21,12 +21,11 @@ class _RiwayatPageState extends State<RiwayatPage> {
   String activeFilter = 'Semua';
   final PageController _pageController = PageController();
   late Future<List<Map<String, dynamic>>> pelanggaranFuture;
-  final ApiService apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
-    pelanggaranFuture = apiService.getPelanggaran();
+    pelanggaranFuture = ApiService.getPelanggaran();
   }
 
   @override
@@ -83,7 +82,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
           );
 
           setState(() {
-            pelanggaranFuture = apiService.getPelanggaran();
+            pelanggaranFuture = ApiService.getPelanggaran();
           });
         },
       ),
@@ -93,6 +92,13 @@ class _RiwayatPageState extends State<RiwayatPage> {
   void _resetFilter() {
     setState(() {
       selectedDateRange = null;
+    });
+  }
+
+  // Callback untuk handle perubahan date range
+  void _onDateRangeChanged(DateTimeRange? dateRange) {
+    setState(() {
+      selectedDateRange = dateRange;
     });
   }
 
@@ -113,6 +119,42 @@ class _RiwayatPageState extends State<RiwayatPage> {
     setState(() {
       activeFilter = index == 0 ? 'Semua' : 'Rekap';
     });
+  }
+
+  // Filter data berdasarkan date range
+  List<Map<String, dynamic>> _filterByDateRange(List<Map<String, dynamic>> data) {
+    if (selectedDateRange == null) {
+      // Jika tidak ada filter, tampilkan data hari ini
+      return _filterHariIni(data);
+    }
+
+    // Filter berdasarkan range tanggal yang dipilih
+    return data.where((item) {
+      try {
+        final tanggalString = (item['tanggal'] ?? '').toString();
+        if (tanggalString.isEmpty) return false;
+
+        final tanggal = DateTime.parse(tanggalString.split(' ')[0]);
+        final startDate = DateTime(
+          selectedDateRange!.start.year,
+          selectedDateRange!.start.month,
+          selectedDateRange!.start.day,
+        );
+        final endDate = DateTime(
+          selectedDateRange!.end.year,
+          selectedDateRange!.end.month,
+          selectedDateRange!.end.day,
+          23,
+          59,
+          59,
+        );
+
+        return tanggal.isAfter(startDate.subtract(const Duration(seconds: 1))) &&
+            tanggal.isBefore(endDate.add(const Duration(seconds: 1)));
+      } catch (e) {
+        return false;
+      }
+    }).toList();
   }
 
   // Filter data hanya untuk tanggal hari ini
@@ -194,8 +236,8 @@ class _RiwayatPageState extends State<RiwayatPage> {
                           child: Text('Data pelanggaran kosong'));
                     }
 
-                    final dataHariIni = _filterHariIni(snapshot.data!);
-                    return _buildSemuaPelanggaranPage(dataHariIni);
+                    final filteredData = _filterByDateRange(snapshot.data!);
+                    return _buildSemuaPelanggaranPage(filteredData);
                   },
                 ),
 
@@ -211,8 +253,8 @@ class _RiwayatPageState extends State<RiwayatPage> {
                       return const Center(child: Text('Data rekap kosong'));
                     }
 
-                    final dataHariIni = _filterHariIni(snapshot.data!);
-                    return _buildRekapPage(dataHariIni);
+                    final filteredData = _filterByDateRange(snapshot.data!);
+                    return _buildRekapPage(filteredData);
                   },
                 ),
               ],
@@ -236,27 +278,57 @@ class _RiwayatPageState extends State<RiwayatPage> {
           onRekapPressed: _showRekapAnggotaDialog,
           onInputPressed: _showInputDialog,
           onResetFilter: _resetFilter,
+          onDateRangeChanged: _onDateRangeChanged, // Tambahkan callback
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: data.length,
-            itemBuilder: (context, index) {
-              final item = data[index];
-              return PelanggaranCard(
-                nama: item['nama'] ?? '-',
-                kelas: item['kelas'] ?? '-',
-                tanggal: item['tanggal'] ?? '-',
-                waktu: item['waktu'] ?? '-',
-                jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
-                poin: item['poin']?.toInt() ?? 0,
-                keterangan: item['keterangan'] ?? '-',
-                icon: Icons.warning_amber_outlined,
-                color: Colors.amber[700]!,
-              );
-            },
-          ),
+          child: data.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inbox_outlined,
+                          size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Tidak ada data pelanggaran',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        selectedDateRange != null
+                            ? 'pada rentang tanggal yang dipilih'
+                            : 'pada hari ini',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: data.length,
+                  itemBuilder: (context, index) {
+                    final item = data[index];
+                    return PelanggaranCard(
+                      nama: item['nama'] ?? '-',
+                      kelas: item['kelas'] ?? '-',
+                      tanggal: item['tanggal'] ?? '-',
+                      waktu: item['waktu'] ?? '-',
+                      jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
+                      poin: item['poin']?.toInt() ?? 0,
+                      keterangan: item['keterangan'] ?? '-',
+                      icon: Icons.warning_amber_outlined,
+                      color: Colors.amber[700]!,
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -402,22 +474,51 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
         // Statistik Cards
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: rekapKelas.entries.map((entry) {
-              final kelas = entry.key;
-              final totalSiswa = entry.value['total_siswa']!;
-              final totalPelanggaran = entry.value['total_pelanggaran']!;
-              return _buildModernRekapCard(
-                title: kelas,
-                totalSiswa: totalSiswa,
-                totalPelanggaran: totalPelanggaran,
-                icon: Icons.school_rounded,
-                gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                onTap: () => _navigateToDetailKelas(kelas, data), // Tambahkan navigasi
-              );
-            }).toList(),
-          ),
+          child: rekapKelas.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inbox_outlined,
+                          size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Tidak ada data rekap',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        selectedDateRange != null
+                            ? 'pada rentang tanggal yang dipilih'
+                            : 'pada hari ini',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: rekapKelas.entries.map((entry) {
+                    final kelas = entry.key;
+                    final totalSiswa = entry.value['total_siswa']!;
+                    final totalPelanggaran = entry.value['total_pelanggaran']!;
+                    return _buildModernRekapCard(
+                      title: kelas,
+                      totalSiswa: totalSiswa,
+                      totalPelanggaran: totalPelanggaran,
+                      icon: Icons.school_rounded,
+                      gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                      onTap: () => _navigateToDetailKelas(kelas, data),
+                    );
+                  }).toList(),
+                ),
         ),
       ],
     );
@@ -429,7 +530,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
     required int totalPelanggaran,
     required IconData icon,
     required List<Color> gradientColors,
-    required VoidCallback onTap, // Tambahkan parameter onTap
+    required VoidCallback onTap,
   }) {
     Color pelanggaranColor;
     Color pelanggaranBgColor;
@@ -465,7 +566,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onTap, // Gunakan onTap yang dikirim sebagai parameter
+          onTap: onTap,
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.all(20),

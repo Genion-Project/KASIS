@@ -1,3 +1,4 @@
+// filter_section.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 
@@ -6,6 +7,7 @@ class FilterSection extends StatelessWidget {
   final VoidCallback onRekapPressed;
   final VoidCallback onInputPressed;
   final VoidCallback onResetFilter;
+  final void Function(DateTimeRange?) onDateRangeChanged; // <-- callback untuk parent
 
   const FilterSection({
     super.key,
@@ -13,6 +15,7 @@ class FilterSection extends StatelessWidget {
     required this.onRekapPressed,
     required this.onInputPressed,
     required this.onResetFilter,
+    required this.onDateRangeChanged, // <-- wajib diisi parent
   });
 
   @override
@@ -29,12 +32,7 @@ class FilterSection extends StatelessWidget {
                   name: 'date_range',
                   firstDate: DateTime(2024),
                   lastDate: DateTime(2026),
-                  initialValue: selectedDateRange == null
-                      ? null
-                      : DateTimeRange(
-                          start: selectedDateRange!.start,
-                          end: selectedDateRange!.end,
-                        ),
+                  initialValue: selectedDateRange, // cukup pakai ini
                   decoration: InputDecoration(
                     labelText: 'Filter Tanggal',
                     prefixIcon: const Icon(Icons.calendar_month),
@@ -42,10 +40,7 @@ class FilterSection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onChanged: (range) {
-                    // bisa panggil callback setState di parent
-                    // misalnya lewat ValueNotifier atau callback
-                  },
+                  onChanged: onDateRangeChanged, // teruskan ke parent
                 ),
               ),
               const SizedBox(width: 8),
@@ -59,8 +54,8 @@ class FilterSection extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.teal[600],
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -78,8 +73,8 @@ class FilterSection extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[700],
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

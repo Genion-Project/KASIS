@@ -20,22 +20,21 @@ class ApiService {
     }
   }
 
-static Future<void> addPelanggaran(Map<String, dynamic> data) async {
-  final response = await http.post(
-    Uri.parse("$baseUrl/pelanggaran"),
-    headers: {"Content-Type": "application/json"},
-    body: jsonEncode(data),
-  );
+  static Future<void> addPelanggaran(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse("$baseUrl/pelanggaran"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(data),
+    );
 
-  if (response.statusCode >= 200 && response.statusCode < 300) {
-    return; // sukses, biar widget yg kasih feedback
-  } else {
-    throw Exception("Gagal Menyimpan, Terjadi Kesalahan");
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return; // sukses, biar widget yg kasih feedback
+    } else {
+      throw Exception("Gagal Menyimpan, Terjadi Kesalahan");
+    }
   }
 
-}
-
-Future<List<Map<String, dynamic>>> getPelanggaran() async {
+  static Future<List<Map<String, dynamic>>> getPelanggaran() async {
     final response = await http.get(Uri.parse('$baseUrl/pelanggaran'));
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -46,34 +45,34 @@ Future<List<Map<String, dynamic>>> getPelanggaran() async {
     }
   }
 
- // Ambil semua members dengan total kas yang sudah dibayar
-static Future<List<Map<String, dynamic>>> getMembers() async {
-  final url = Uri.parse('$baseUrl/members');
-  final response = await http.get(url);
+  // Ambil semua members dengan total kas yang sudah dibayar
+  static Future<List<Map<String, dynamic>>> getMembers() async {
+    final url = Uri.parse('$baseUrl/members');
+    final response = await http.get(url);
 
-  if (response.statusCode == 200) {
-    final List data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
 
-    // Debug: tampilkan response mentah di terminal
-    print('RAW members: $data');
+      // Debug: tampilkan response mentah di terminal
+      print('RAW members: $data');
 
-    final members = data.map((e) => {
-      'id': e['id'],
-      'name': e['name'],
-      'amount': e['total_paid'],
-      'avatar': (e['name'] != null && e['name'].isNotEmpty) ? e['name'][0].toUpperCase() : '?',
-    }).toList();
+      final members = data.map((e) => {
+        'id': e['id'],
+        'name': e['name'],
+        'amount': e['total_paid'],
+        'avatar': (e['name'] != null && e['name'].isNotEmpty) ? e['name'][0].toUpperCase() : '?',
+      }).toList();
 
-    // Debug: tampilkan hasil mapping di terminal
-    print('Mapped members: $members');
+      // Debug: tampilkan hasil mapping di terminal
+      print('Mapped members: $members');
 
-    return members;
-  } else {
-    throw Exception('Gagal mengambil data members');
+      return members;
+    } else {
+      throw Exception('Gagal mengambil data members');
+    }
   }
-}
 
-static Future<List<Map<String, dynamic>>> getMemberPayments(int siswaId) async {
+  static Future<List<Map<String, dynamic>>> getMemberPayments(int siswaId) async {
     final url = Uri.parse('$baseUrl/members/$siswaId/payments');
     final response = await http.get(url);
 
@@ -97,9 +96,7 @@ static Future<List<Map<String, dynamic>>> getMemberPayments(int siswaId) async {
     return payments;
   }
 
-
-
-static Future<Map<String, dynamic>> getLaporan() async {
+  static Future<Map<String, dynamic>> getLaporan() async {
     final url = Uri.parse('$baseUrl/laporan');
     final response = await http.get(url);
 
@@ -118,33 +115,33 @@ static Future<Map<String, dynamic>> getLaporan() async {
     }
   }
 
-// Tambah siswa
-static Future<Map<String, dynamic>> addSiswa(String namaSiswa) async {
-  final url = Uri.parse('$baseUrl/siswa');
-  final response = await http.post(
-    url,
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'nama_siswa': namaSiswa}),
-  );
+  // Tambah siswa
+  static Future<Map<String, dynamic>> addSiswa(String namaSiswa) async {
+    final url = Uri.parse('$baseUrl/siswa');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'nama_siswa': namaSiswa}),
+    );
 
-  if (response.statusCode == 200 || response.statusCode == 201) {
-    return jsonDecode(response.body);
-  } else {
-    throw Exception('Gagal menambahkan siswa');
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Gagal menambahkan siswa');
+    }
   }
-}
 
-// Generate kas mingguan untuk siswa
-static Future<void> generateKasMingguan(int siswaId) async {
-  final url = Uri.parse('$baseUrl/generate_kas/$siswaId');
-  final response = await http.post(url);
+  // Generate kas mingguan untuk siswa
+  static Future<void> generateKasMingguan(int siswaId) async {
+    final url = Uri.parse('$baseUrl/generate_kas/$siswaId');
+    final response = await http.post(url);
 
-  if (response.statusCode != 200) {
-    throw Exception('Gagal generate kas mingguan');
+    if (response.statusCode != 200) {
+      throw Exception('Gagal generate kas mingguan');
+    }
   }
-}
 
-static Future<void> bayarKas({
+  static Future<void> bayarKas({
     required int siswaId,
     required int mingguKe,
     int jumlah = 2000,
@@ -167,7 +164,7 @@ static Future<void> bayarKas({
     }
   }
 
-    /// Ambil rekap pelanggaran (jumlah per siswa + total poin)
+  /// Ambil rekap pelanggaran (jumlah per siswa + total poin)
   static Future<List<Map<String, dynamic>>> getRekapPelanggaran() async {
     final url = Uri.parse("$baseUrl/pelanggaran");
     final response = await http.get(url);
@@ -201,5 +198,43 @@ static Future<void> bayarKas({
     }
   }
 
+  // Ambil semua pemasukan (FIXED: tambahkan static)
+  static Future<List<dynamic>> getPemasukan() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/pemasukan"));
+      
+      print('Status getPemasukan: ${response.statusCode}');
+      print('Response getPemasukan: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data is List ? data : [];
+      } else {
+        throw Exception("Gagal memuat data pemasukan: ${response.statusCode}");
+      }
+    } catch (e) {
+      print('Error di getPemasukan: $e');
+      throw Exception("Gagal memuat data pemasukan: $e");
+    }
+  }
 
+  // Ambil semua pengeluaran (FIXED: tambahkan static)
+  static Future<List<dynamic>> getPengeluaran() async {
+    try {
+      final response = await http.get(Uri.parse("$baseUrl/pengeluaran"));
+      
+      print('Status getPengeluaran: ${response.statusCode}');
+      print('Response getPengeluaran: ${response.body}');
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data is List ? data : [];
+      } else {
+        throw Exception("Gagal memuat data pengeluaran: ${response.statusCode}");
+      }
+    } catch (e) {
+      print('Error di getPengeluaran: $e');
+      throw Exception("Gagal memuat data pengeluaran: $e");
+    }
+  }
 }
