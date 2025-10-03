@@ -3,7 +3,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class DetailKelasPage extends StatelessWidget {
   final String namaKelas;
@@ -15,6 +17,365 @@ class DetailKelasPage extends StatelessWidget {
     required this.dataSiswa,
   });
 
+  // Function to generate PDF
+  Future<void> _generatePDF(BuildContext context) async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Grouping data by student name
+      final Map<String, List<Map<String, dynamic>>> groupedByStudent = {};
+      
+      for (var item in dataSiswa) {
+        final nama = item['nama'] ?? 'Tidak diketahui';
+        if (!groupedByStudent.containsKey(nama)) {               
+          groupedByStudent[nama] = [];
+        }
+        groupedByStudent[nama]!.add(item);
+      }
+
+      final pdf = pw.Document();
+
+      // Create PDF content
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return [
+              // Header
+              pw.Container(
+                padding: const pw.EdgeInsets.all(16),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.blue700,
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'REKAP PELANGGARAN SISWA',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 20,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Text(
+                      'Kelas: $namaKelas',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 14,
+                      ),
+                    ),
+                    pw.Text(
+                      'Tanggal Export: ${DateFormat('dd MMMM yyyy, HH:mm').format(DateTime.now())}',
+                      style: pw.TextStyle(
+                        color: PdfColors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 16),
+
+              // Summary
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                children: [
+                  _buildPdfStatCard(
+                    'Total Siswa',
+                    groupedByStudent.length.toString(),
+                  ),
+                  _buildPdfStatCard(
+                    'Total Pelanggaran',
+                    dataSiswa.length.toString(),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 24),
+
+              // Student List
+              pw.Text(
+                'Daftar Siswa dan Pelanggaran',
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+
+              // Table
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                children: [
+                  // Header
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColors.grey200,
+                    ),
+                    children: [
+                      _buildTableCell('No', isHeader: true),
+                      _buildTableCell('Nama Siswa', isHeader: true),
+                      _buildTableCell('Jml\nPelanggaran', isHeader: true),
+                      _buildTableCell('Total\nPoin', isHeader: true),
+                      _buildTableCell('Status', isHeader: true),
+                    ],
+                  ),
+                  // Data
+                  ...groupedByStudent.entries.map((entry) {
+                    final index = groupedByStudent.keys.toList().indexOf(entry.key);
+                    final nama = entry.key;
+                    final pelanggaranSiswa = entry.value;
+                    final totalPoin = pelanggaranSiswa.fold<int>(
+                      0,
+                      (sum, item) {
+                        final poin = item['poin'];
+                        final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
+                        return (sum + poinInt).toInt();
+                      },
+                    );
+
+                    String severity;
+                    if (totalPoin >= 50) {
+                      severity = 'Kritis';
+                    } else if (totalPoin >= 30) {
+                      severity = 'Tinggi';
+                    } else if (totalPoin >= 15) {
+                      severity = 'Sedang';
+                    } else {
+                      severity = 'Rendah';
+                    }
+
+                    return pw.TableRow(
+                      children: [
+                        _buildTableCell((index + 1).toString()),
+                        _buildTableCell(nama),
+                        _buildTableCell(pelanggaranSiswa.length.toString()),
+                        _buildTableCell(totalPoin.toString()),
+                        _buildTableCell(severity),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
+
+              pw.SizedBox(height: 24),
+
+              // Detail per siswa
+              pw.Text(
+                'Detail Pelanggaran per Siswa',
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+
+              ...groupedByStudent.entries.map((entry) {
+                final nama = entry.key;
+                final pelanggaranSiswa = entry.value;
+                final totalPoin = pelanggaranSiswa.fold<int>(
+                  0,
+                  (sum, item) {
+                    final poin = item['poin'];
+                    final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
+                    return (sum + poinInt).toInt();
+                  },
+                );
+
+                return pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Container(
+                      width: double.infinity,
+                      padding: const pw.EdgeInsets.all(12),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.blue50,
+                        borderRadius: pw.BorderRadius.circular(8),
+                      ),
+                      child: pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text(
+                            nama,
+                            style: pw.TextStyle(
+                              fontSize: 14,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                          pw.Text(
+                            'Total Poin: $totalPoin',
+                            style: pw.TextStyle(
+                              fontSize: 12,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.red700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    pw.SizedBox(height: 8),
+                    ...pelanggaranSiswa.map((pelanggaran) {
+                      String tanggal = pelanggaran['tanggal'] ?? '-';
+                      String waktu = pelanggaran['waktu'] ?? '-';
+                      
+                      try {
+                        if (waktu == '-' || waktu.isEmpty) {
+                          final parsed = DateTime.tryParse(tanggal);
+                          if (parsed != null) {
+                            tanggal = DateFormat('dd MMM yyyy').format(parsed);
+                            waktu = DateFormat('HH:mm').format(parsed);
+                          }
+                        }
+                      } catch (_) {}
+
+                      return pw.Container(
+                        margin: const pw.EdgeInsets.only(bottom: 8),
+                        padding: const pw.EdgeInsets.all(10),
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(color: PdfColors.grey300),
+                          borderRadius: pw.BorderRadius.circular(6),
+                        ),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Row(
+                              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                              children: [
+                                pw.Expanded(
+                                  child: pw.Text(
+                                    pelanggaran['jenis_pelanggaran'] ?? '-',
+                                    style: pw.TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: pw.FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                pw.Text(
+                                  '${pelanggaran['poin']?.toInt() ?? 0} poin',
+                                  style: pw.TextStyle(
+                                    fontSize: 10,
+                                    color: PdfColors.red700,
+                                    fontWeight: pw.FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            pw.SizedBox(height: 4),
+                            pw.Text(
+                              'Tanggal: $tanggal | Waktu: $waktu',
+                              style: const pw.TextStyle(
+                                fontSize: 9,
+                                color: PdfColors.grey700,
+                              ),
+                            ),
+                            if (pelanggaran['keterangan'] != null && 
+                                pelanggaran['keterangan'] != '-') ...[
+                              pw.SizedBox(height: 4),
+                              pw.Text(
+                                'Keterangan: ${pelanggaran['keterangan']}',
+                                style: const pw.TextStyle(
+                                  fontSize: 9,
+                                  color: PdfColors.grey600,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    pw.SizedBox(height: 16),
+                  ],
+                );
+              }).toList(),
+            ];
+          },
+        ),
+      );
+
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Show preview and print dialog
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+      );
+
+    } catch (e) {
+      // Close loading dialog if still open
+      Navigator.pop(context);
+      
+      // Show error dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error'),
+          content: Text('Gagal membuat PDF: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  pw.Widget _buildPdfStatCard(String label, String value) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.blue50,
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: PdfColors.blue200, width: 2),
+      ),
+      child: pw.Column(
+        children: [
+          pw.Text(
+            value,
+            style: pw.TextStyle(
+              fontSize: 24,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.blue900,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            label,
+            style: const pw.TextStyle(
+              fontSize: 12,
+              color: PdfColors.grey700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildTableCell(String text, {bool isHeader = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(8),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: isHeader ? 10 : 9,
+          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Grouping data by student name
@@ -22,7 +383,7 @@ class DetailKelasPage extends StatelessWidget {
     
     for (var item in dataSiswa) {
       final nama = item['nama'] ?? 'Tidak diketahui';
-      if (!groupedByStudent.containsKey(nama)) {
+      if (!groupedByStudent.containsKey(nama)) {               
         groupedByStudent[nama] = [];
       }
       groupedByStudent[nama]!.add(item);
@@ -46,6 +407,15 @@ class DetailKelasPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          // Tombol Export PDF
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_rounded),
+            tooltip: 'Export ke PDF',
+            onPressed: () => _generatePDF(context),
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(
@@ -103,6 +473,28 @@ class DetailKelasPage extends StatelessWidget {
                       Icons.warning_amber_rounded,
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                // Tombol Export PDF (alternatif di body)
+                ElevatedButton.icon(
+                  onPressed: () => _generatePDF(context),
+                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                  label: const Text(
+                    'Export ke PDF',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF3B82F6),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 3,
+                  ),
                 ),
               ],
             ),
@@ -342,120 +734,120 @@ class DetailKelasPage extends StatelessWidget {
     required String tanggal,
     required String waktu,
     required String keterangan,
-    }) {
+  }) {
     // Default value
     String displayTanggal = tanggal;
     String displayWaktu = waktu;
 
     try {
-        // Kalau waktu kosong, cek apakah tanggal berisi timestamp
-        if (waktu == '-' || waktu.isEmpty) {
+      // Kalau waktu kosong, cek apakah tanggal berisi timestamp
+      if (waktu == '-' || waktu.isEmpty) {
         final parsed = DateTime.tryParse(tanggal);
         if (parsed != null) {
-            displayTanggal = DateFormat('dd MMM yyyy').format(parsed); // contoh: 01 Okt 2025
-            displayWaktu = DateFormat('HH:mm').format(parsed);         // contoh: 09:35
+          displayTanggal = DateFormat('dd MMM yyyy').format(parsed);
+          displayWaktu = DateFormat('HH:mm').format(parsed);
         }
-        }
+      }
     } catch (_) {
-        // biarkan default kalau parsing gagal
+      // biarkan default kalau parsing gagal
     }
 
     return Container(
-        margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: Colors.grey.withOpacity(0.1),
-            width: 1,
+          color: Colors.grey.withOpacity(0.1),
+          width: 1,
         ),
-        ),
-        child: Column(
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Row(
+          Row(
             children: [
-                Expanded(
+              Expanded(
                 child: Text(
-                    jenis,
-                    style: const TextStyle(
+                  jenis,
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
-                    ),
+                  ),
                 ),
-                ),
-                Container(
+              ),
+              Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFDC2626).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFDC2626).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                    '$poin poin',
-                    style: const TextStyle(
+                  '$poin poin',
+                  style: const TextStyle(
                     color: Color(0xFFDC2626),
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    ),
+                  ),
                 ),
-                ),
+              ),
             ],
-            ),
-            const SizedBox(height: 12),
-            Row(
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
-                Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
-                const SizedBox(width: 6),
-                Text(
+              Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 6),
+              Text(
                 displayTanggal,
                 style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[700],
+                  fontSize: 13,
+                  color: Colors.grey[700],
                 ),
-                ),
-                const SizedBox(width: 16),
-                Icon(Icons.access_time_rounded, size: 14, color: Colors.grey[600]),
-                const SizedBox(width: 6),
-                Text(
+              ),
+              const SizedBox(width: 16),
+              Icon(Icons.access_time_rounded, size: 14, color: Colors.grey[600]),
+              const SizedBox(width: 6),
+              Text(
                 displayWaktu,
                 style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[700],
+                  fontSize: 13,
+                  color: Colors.grey[700],
                 ),
-                ),
+              ),
             ],
-            ),
-            if (keterangan != '-') ...[
+          ),
+          if (keterangan != '-') ...[
             const SizedBox(height: 8),
             Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
+              ),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                    Icon(Icons.info_outline_rounded, size: 14, color: Colors.grey[600]),
-                    const SizedBox(width: 6),
-                    Expanded(
+                  Icon(Icons.info_outline_rounded, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 6),
+                  Expanded(
                     child: Text(
-                        keterangan,
-                        style: TextStyle(
+                      keterangan,
+                      style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
                         fontStyle: FontStyle.italic,
-                        ),
+                      ),
                     ),
-                    ),
+                  ),
                 ],
-                ),
+              ),
             ),
-            ],
+          ],
         ],
-        ),
+      ),
     );
-    }
   }
+}

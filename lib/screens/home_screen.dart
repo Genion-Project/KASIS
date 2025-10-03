@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import 'package:bendahara_app/pages/pemasukan_page.dart';
 import 'package:bendahara_app/pages/pengeluaran_page.dart';
 import 'package:bendahara_app/pages/riwayat_page.dart';
+import '../pages/profile_page.dart';
 
 class HomeScreen extends StatelessWidget {
   void _showProfileMenu(BuildContext context) {
@@ -110,7 +111,13 @@ class HomeScreen extends StatelessWidget {
               icon: Icons.person_outline,
               title: 'Profile',
               iconColor: Colors.blue[600]!,
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context); // Tutup bottom sheet dulu
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ProfilePage()),
+                );
+              },
             ),
             _buildMenuItem(
               context,
@@ -346,7 +353,7 @@ class HomeScreen extends StatelessWidget {
                                     ),
                                     SizedBox(width: 8),
                                     Text(
-                                      'Total Saldo Kelas',
+                                      'Total Kas Osis',
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.95),
                                         fontSize: 14,
@@ -376,18 +383,18 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
 
-            // Quick Actions with modern cards
+            // Simple Elegant Quick Actions
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
               child: Row(
                 children: [
                   Expanded(
-                    child: _buildModernQuickAction(
+                    child: _buildSimpleButton(
                       context,
-                      icon: Icons.add_circle_rounded,
+                      icon: Icons.arrow_downward_rounded,
                       label: 'Pemasukan',
-                      gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
+                      color: Color(0xFF10B981),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -396,13 +403,13 @@ class HomeScreen extends StatelessWidget {
                       },
                     ),
                   ),
-                  SizedBox(width: 12),
+                  SizedBox(width: 14),
                   Expanded(
-                    child: _buildModernQuickAction(
+                    child: _buildSimpleButton(
                       context,
-                      icon: Icons.remove_circle_rounded,
+                      icon: Icons.arrow_upward_rounded,
                       label: 'Pengeluaran',
-                      gradientColors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                      color: Color(0xFFEF4444),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -411,13 +418,13 @@ class HomeScreen extends StatelessWidget {
                       },
                     ),
                   ),
-                  SizedBox(width: 12),
+                  SizedBox(width: 14),
                   Expanded(
-                    child: _buildModernQuickAction(
+                    child: _buildSimpleButton(
                       context,
-                      icon: Icons.warning_rounded,
-                      label: 'Rekap Pelanggaran',
-                      gradientColors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                      icon: Icons.assessment_rounded,
+                      label: 'Rekap',
+                      color: Color(0xFFF59E0B),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -441,9 +448,8 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       // Statistics Card
                       StatCardWidget(),
-
                       SizedBox(height: 28),
-
+                      
                       // Recent Activities Header
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -485,7 +491,6 @@ class HomeScreen extends StatelessWidget {
                       ),
                       
                       SizedBox(height: 16),
-
                       // Activity items
                       ActivityItemWidget(
                         title: 'Iuran Bulanan - Ahmad',
@@ -510,7 +515,6 @@ class HomeScreen extends StatelessWidget {
                         icon: Icons.arrow_downward,
                         time: '1 hari lalu',
                       ),
-
                       SizedBox(height: 100),
                     ],
                   ),
@@ -523,57 +527,62 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildModernQuickAction(
+  Widget _buildSimpleButton(
     BuildContext context, {
     required IconData icon,
     required String label,
-    required List<Color> gradientColors,
+    required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.grey[200]!,
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: gradientColors[0].withOpacity(0.4),
-              blurRadius: 12,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
-                borderRadius: BorderRadius.circular(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
               ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 28,
+              SizedBox(height: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.grey[800],
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
               ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

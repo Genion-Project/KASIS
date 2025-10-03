@@ -2,6 +2,40 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'add_transaction_screen.dart';
 import 'members_screen.dart';
+import 'package:flutter/services.dart';
+import '../pages/splash_screen_particles.dart'; // Import splash
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Status bar transparent
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ),
+  );
+  
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Bendahara OSIS',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
+        useMaterial3: true,
+      ),
+      // 👇 ganti ke SplashScreenParticles
+      home: const SplashScreenParticles(),
+    );
+  }
+}
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
