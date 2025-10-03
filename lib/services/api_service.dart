@@ -237,4 +237,75 @@ class ApiService {
       throw Exception("Gagal memuat data pengeluaran: $e");
     }
   }
+
+  // === Tambah pemasukan ===
+  static Future<bool> addPemasukan({
+    String? tanggal,
+    required int jumlah,
+    required String keterangan,
+    int? siswaId,
+    int? mingguKe,
+  }) async {
+    try {
+      final body = {
+        "tanggal": tanggal,
+        "jumlah": jumlah,
+        "keterangan": keterangan,
+        "siswa_id": siswaId,
+        "minggu_ke": mingguKe,
+      };
+
+      // Hapus key yang null biar tidak dikirim
+      body.removeWhere((key, value) => value == null);
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/pemasukan"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 201) {
+        return true;
+      } else {
+        print("❌ Gagal tambah pemasukan: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("❌ Error addPemasGagaukan: $e");
+      return false;
+    }
+  }
+
+  static Future<bool> addPengeluaran({
+    String? tanggal,
+    required int jumlah,
+    required String keterangan,
+  }) async {
+    try {
+      final body = {
+        "tanggal": tanggal,
+        "jumlah": jumlah,
+        "keterangan": keterangan,
+      };
+
+      // hapus key yang null
+      body.removeWhere((key, value) => value == null);
+
+      final response = await http.post(
+        Uri.parse("$baseUrl/pengeluaran"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      } else {
+        print("❌ Gagal tambah pengeluaran: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("❌ Error addPengeluaran: $e");
+      return false;
+    }
+  }
 }
