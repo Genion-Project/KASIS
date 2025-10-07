@@ -267,11 +267,11 @@ class ApiService {
       if (response.statusCode == 201) {
         return true;
       } else {
-        print("❌ Gagal tambah pemasukan: ${response.body}");
+        print("âŒ Gagal tambah pemasukan: ${response.body}");
         return false;
       }
     } catch (e) {
-      print("❌ Error addPemasGagaukan: $e");
+      print("âŒ Error addPemasGagaukan: $e");
       return false;
     }
   }
@@ -300,12 +300,45 @@ class ApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return true;
       } else {
-        print("❌ Gagal tambah pengeluaran: ${response.body}");
+        print("âŒ Gagal tambah pengeluaran: ${response.body}");
         return false;
       }
     } catch (e) {
-      print("❌ Error addPengeluaran: $e");
+      print("âŒ Error addPengeluaran: $e");
       return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> registerUser({
+    required String email,
+    required String nama,
+    required String noTelp,
+    required String password,
+    String jabatan = 'Anggota',
+  }) async {
+    final url = Uri.parse('$baseUrl/register');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'nama': nama,
+          'no_telp': noTelp,
+          'password': password,
+          'jabatan': jabatan,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body); // sukses
+      } else {
+        final body = jsonDecode(response.body);
+        throw Exception(body['error'] ?? 'Gagal mendaftarkan user');
+      }
+    } catch (e) {
+      throw Exception('Terjadi kesalahan: $e');
     }
   }
 }

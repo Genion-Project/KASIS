@@ -35,6 +35,7 @@ class HeaderSummary extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // Header compact dengan icon
           Row(

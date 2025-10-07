@@ -21,6 +21,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
   String activeFilter = 'Semua';
   final PageController _pageController = PageController();
   late Future<List<Map<String, dynamic>>> pelanggaranFuture;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
   @override
   void dispose() {
     _pageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -95,7 +97,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
     });
   }
 
-  // Callback untuk handle perubahan date range
   void _onDateRangeChanged(DateTimeRange? dateRange) {
     setState(() {
       selectedDateRange = dateRange;
@@ -121,14 +122,11 @@ class _RiwayatPageState extends State<RiwayatPage> {
     });
   }
 
-  // Filter data berdasarkan date range
   List<Map<String, dynamic>> _filterByDateRange(List<Map<String, dynamic>> data) {
     if (selectedDateRange == null) {
-      // Jika tidak ada filter, tampilkan data hari ini
       return _filterHariIni(data);
     }
 
-    // Filter berdasarkan range tanggal yang dipilih
     return data.where((item) {
       try {
         final tanggalString = (item['tanggal'] ?? '').toString();
@@ -157,7 +155,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
     }).toList();
   }
 
-  // Filter data hanya untuk tanggal hari ini
   List<Map<String, dynamic>> _filterHariIni(List<Map<String, dynamic>> data) {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     return data
@@ -165,7 +162,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
         .toList();
   }
 
-  // Navigasi ke halaman detail kelas
   void _navigateToDetailKelas(String kelas, List<Map<String, dynamic>> allData) {
     final dataSiswaKelas = allData.where((item) => item['kelas'] == kelas).toList();
     
@@ -223,7 +219,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
               controller: _pageController,
               onPageChanged: _onPageChanged,
               children: [
-                // Halaman Semua Pelanggaran
                 FutureBuilder<List<Map<String, dynamic>>>(
                   future: pelanggaranFuture,
                   builder: (context, snapshot) {
@@ -240,8 +235,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
                     return _buildSemuaPelanggaranPage(filteredData);
                   },
                 ),
-
-                // Halaman Rekap
                 FutureBuilder<List<Map<String, dynamic>>>(
                   future: pelanggaranFuture,
                   builder: (context, snapshot) {
@@ -278,7 +271,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
           onRekapPressed: _showRekapAnggotaDialog,
           onInputPressed: _showInputDialog,
           onResetFilter: _resetFilter,
-          onDateRangeChanged: _onDateRangeChanged, // Tambahkan callback
+          onDateRangeChanged: _onDateRangeChanged,
         ),
         const SizedBox(height: 8),
         Expanded(
@@ -353,118 +346,132 @@ class _RiwayatPageState extends State<RiwayatPage> {
       }
     }
 
-    return Column(
-      children: [
-        // Modern Header dengan Gradient
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFF59E0B), Color(0xFFD97706), Color(0xFFB45309)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0xFFF59E0B).withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 2,
+    return CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        // Collapsing Header
+        SliverAppBar(
+          expandedHeight: 200,
+          pinned: true,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          backgroundColor: const Color(0xFFF59E0B),
+          flexibleSpace: FlexibleSpaceBar(
+            centerTitle: true,
+            titlePadding: EdgeInsets.zero,
+            title: null,
+            background: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF59E0B), Color(0xFFD97706), Color(0xFFB45309)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFF59E0B).withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                ),
-                child: const Icon(
-                  Icons.assessment_rounded,
-                  size: 48,
-                  color: Colors.white,
-                ),
+                ],
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Rekap Pelanggaran',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Per Kelas & Siswa',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.95),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Action Button modern
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient:
-                  const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF1E40AF)]),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF2563EB).withOpacity(0.4),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _showRekapAnggotaDialog,
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 18),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.people_alt_rounded,
-                          color: Colors.white, size: 22),
-                      SizedBox(width: 12),
-                      Text(
-                        'Lihat Rekap Lengkap',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.3,
-                        ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 2,
                       ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_rounded,
-                          color: Colors.white, size: 20),
-                    ],
+                    ),
+                    child: const Icon(
+                      Icons.assessment_rounded,
+                      size: 48,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Rekap Pelanggaran',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Per Kelas & Siswa',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.95),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Action Button
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF1E40AF)]),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withOpacity(0.4),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _showRekapAnggotaDialog,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.people_alt_rounded,
+                            color: Colors.white, size: 22),
+                        SizedBox(width: 12),
+                        Text(
+                          'Lihat Rekap Lengkap',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 20),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -472,10 +479,10 @@ class _RiwayatPageState extends State<RiwayatPage> {
           ),
         ),
 
-        // Statistik Cards
-        Expanded(
-          child: rekapKelas.isEmpty
-              ? Center(
+        // List Cards
+        rekapKelas.isEmpty
+            ? SliverFillRemaining(
+                child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -502,24 +509,30 @@ class _RiwayatPageState extends State<RiwayatPage> {
                       ),
                     ],
                   ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: rekapKelas.entries.map((entry) {
-                    final kelas = entry.key;
-                    final totalSiswa = entry.value['total_siswa']!;
-                    final totalPelanggaran = entry.value['total_pelanggaran']!;
-                    return _buildModernRekapCard(
-                      title: kelas,
-                      totalSiswa: totalSiswa,
-                      totalPelanggaran: totalPelanggaran,
-                      icon: Icons.school_rounded,
-                      gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                      onTap: () => _navigateToDetailKelas(kelas, data),
-                    );
-                  }).toList(),
                 ),
-        ),
+              )
+            : SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final entry = rekapKelas.entries.elementAt(index);
+                      final kelas = entry.key;
+                      final totalSiswa = entry.value['total_siswa']!;
+                      final totalPelanggaran = entry.value['total_pelanggaran']!;
+                      return _buildModernRekapCard(
+                        title: kelas,
+                        totalSiswa: totalSiswa,
+                        totalPelanggaran: totalPelanggaran,
+                        icon: Icons.school_rounded,
+                        gradientColors: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                        onTap: () => _navigateToDetailKelas(kelas, data),
+                      );
+                    },
+                    childCount: rekapKelas.length,
+                  ),
+                ),
+              ),
       ],
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class MemberDetailPage extends StatefulWidget {
@@ -14,11 +15,24 @@ class MemberDetailPage extends StatefulWidget {
 class _MemberDetailPageState extends State<MemberDetailPage> {
   late Future<List<Map<String, dynamic>>> _paymentsFuture;
   bool _isLoading = false;
+  String _userRole = '';
+  bool _canPayKas = true; // Default true
 
   @override
   void initState() {
     super.initState();
+    _loadUserRole();
     _loadPayments();
+  }
+
+  Future<void> _loadUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userRole = prefs.getString('jabatan') ?? '';
+      // Hanya Bendahara dan OSIS yang bisa bayar kas
+      _canPayKas = _userRole != 'Anggota' && _userRole != 'Guru';
+    });
+    print('🔐 [ROLE] User role: $_userRole, Can pay: $_canPayKas');
   }
 
   Future<void> _loadPayments() async {
@@ -95,10 +109,9 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       title: Text(widget.memberName ?? 'Detail Member'),
-      backgroundColor: Colors.blue,
+      backgroundColor: Colors.blue[700],
       foregroundColor: Colors.white,
-      elevation: 2,
-      shadowColor: Colors.blue.withOpacity(0.3),
+      elevation: 0,
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
@@ -113,14 +126,12 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue[600]!, Colors.blue[700]!],
-        ),
+        color: Colors.blue[700],
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 8,
+            color: Colors.blue.withOpacity(0.2),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
@@ -136,7 +147,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
             child: const Icon(
               Icons.person,
               color: Colors.white,
-              size: 32,
+              size: 30,
             ),
           ),
           const SizedBox(width: 16),
@@ -148,7 +159,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
                   widget.memberName ?? 'Member',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -157,7 +168,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
                   'Riwayat Pembayaran',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
-                    fontSize: 14,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -177,7 +188,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.grey.withOpacity(0.08),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -188,12 +199,12 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.analytics, color: Colors.blue[700], size: 20),
+              Icon(Icons.analytics_outlined, color: Colors.blue[700], size: 18),
               const SizedBox(width: 8),
               Text(
                 'Ringkasan Pembayaran',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey[800],
                 ),
@@ -207,16 +218,16 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
                 child: _buildStatItem(
                   'Total Minggu',
                   '$totalWeeks',
-                  Icons.calendar_today,
-                  Colors.purple[400]!,
+                  Icons.calendar_today_outlined,
+                  Colors.blue[600]!,
                 ),
               ),
               Expanded(
                 child: _buildStatItem(
                   'Sudah Bayar',
                   '$paidCount',
-                  Icons.check_circle,
-                  Colors.green[500]!,
+                  Icons.check_circle_outline,
+                  Colors.green[600]!,
                 ),
               ),
             ],
@@ -228,16 +239,16 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
                 child: _buildStatItem(
                   'Belum Bayar',
                   '${totalWeeks - paidCount}',
-                  Icons.pending,
-                  Colors.orange[500]!,
+                  Icons.pending_outlined,
+                  Colors.orange[600]!,
                 ),
               ),
               Expanded(
                 child: _buildStatItem(
                   'Total Terkumpul',
                   'Rp ${totalAmount.toStringAsFixed(0)}',
-                  Icons.account_balance_wallet,
-                  Colors.blue[600]!,
+                  Icons.account_balance_wallet_outlined,
+                  Colors.grey[700]!,
                 ),
               ),
             ],
@@ -252,19 +263,18 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: 13,
               color: Colors.grey[800],
             ),
           ),
@@ -290,8 +300,15 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
           child: Row(
             children: [
-              Icon(Icons.receipt, color: Colors.grey[700], size: 18),
-              const SizedBox(width: 8),
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.blue[700],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
               Text(
                 'Detail Pembayaran (${payments.length})',
                 style: TextStyle(
@@ -304,152 +321,199 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
           ),
         ),
         ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: payments.length,
-            itemBuilder: (context, index) {
-                final payment = payments[index];
-                final isPaid = payment['status'] == 'Sudah Bayar';
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: payments.length,
+          itemBuilder: (context, index) {
+            final payment = payments[index];
+            final isPaid = payment['status'] == 'Sudah Bayar';
 
-                return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                    color: isPaid ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(14),
+                leading: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isPaid ? Colors.green[600] : Colors.grey[400],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${payment['week']}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
                     ),
-                    boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                    ),
-                    ],
+                  ),
                 ),
-                child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                        color: isPaid ? Colors.green[500] : Colors.grey[400],
-                        borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                        child: Text(
-                        '${payment['week']}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 14,
-                        ),
-                        ),
-                    ),
-                    ),
-                    title: Text(
-                    'Minggu ${payment['week']}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                    ),
-                    ),
-                    subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                        const SizedBox(height: 4),
-                        if (payment['date'] != null && payment['date'] != '-')
-                        Text(
+                title: Text(
+                  'Minggu ${payment['week']}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    if (payment['date'] != null && payment['date'] != '-')
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 12, color: Colors.grey[500]),
+                          const SizedBox(width: 4),
+                          Text(
                             payment['date'],
                             style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
+                              color: Colors.grey[600],
+                              fontSize: 12,
                             ),
-                        ),
-                        if (payment['description'] != null && payment['description'] != '-')
-                        Text(
-                            payment['description'],
-                            style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                        ),
-                        if (!isPaid)
-                        Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: ElevatedButton(
-                            onPressed: () async {
-                                try {
-                                // Panggil API bayar
-                                await ApiService.bayarKas(
-                                    siswaId: widget.memberId,
-                                    mingguKe: payment['week'],
-                                );
-
-                                // Update state lokal
-                                setState(() {
-                                    payment['status'] = 'Sudah Bayar';
-                                    payment['amount'] = 2000;
-                                    payment['description'] = 'Kas Mingguan';
-                                });
-                                } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Gagal bayar: $e')),
-                                );
-                                }
-                            },
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue[600],
-                                minimumSize: const Size(70, 28),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            ),
-                            child: const Text(
-                                'Bayar',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white, // atur warna di sini
-                                ),
-                            ),
-                            ),
-                        ),
-                    ],
-                    ),
-                    trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                        Text(
-                        'Rp ${payment['amount']}',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: isPaid ? Colors.green[600] : Colors.grey[600],
-                        ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                            color: isPaid ? Colors.green[50] : Colors.red[50],
-                            borderRadius: BorderRadius.circular(6),
-                        ),
+                          ),
+                        ],
+                      ),
+                    if (payment['description'] != null && payment['description'] != '-')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
                         child: Text(
-                            isPaid ? 'Lunas' : 'Belum',
-                            style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: isPaid ? Colors.green[700] : Colors.red[700],
+                          payment['description'],
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    // Tampilkan tombol bayar HANYA jika user bukan Anggota/Guru DAN belum bayar
+                    if (!isPaid && _canPayKas)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              print('💰 [BAYAR] Membayar kas minggu ${payment['week']}');
+                              
+                              // Panggil API bayar
+                              await ApiService.bayarKas(
+                                siswaId: widget.memberId,
+                                mingguKe: payment['week'],
+                              );
+
+                              // Update state lokal
+                              setState(() {
+                                payment['status'] = 'Sudah Bayar';
+                                payment['amount'] = 2000;
+                                payment['description'] = 'Kas Mingguan';
+                              });
+                              
+                              print('✅ [BAYAR] Berhasil bayar kas');
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.check_circle, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Text('Pembayaran berhasil'),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.green[600],
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              );
+                            } catch (e) {
+                              print('❌ [BAYAR] Error: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.error, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Expanded(child: Text('Gagal bayar: $e')),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.red[600],
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[600],
+                            minimumSize: const Size(80, 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Bayar',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                        ),
-                    ],
-                    ),
+                      ),
+                  ],
                 ),
-                );
-            },
-            ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Rp ${payment['amount']}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: isPaid ? Colors.green[600] : Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isPaid ? Colors.green[50] : Colors.red[50],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isPaid ? 'Lunas' : 'Belum',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: isPaid ? Colors.green[700] : Colors.red[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ],
     );
   }
@@ -464,7 +528,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.grey.withOpacity(0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -475,7 +539,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
           children: [
             Icon(
               Icons.error_outline,
-              size: 64,
+              size: 60,
               color: Colors.red[400],
             ),
             const SizedBox(height: 16),
@@ -501,11 +565,12 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
               child: ElevatedButton(
                 onPressed: _refreshData,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: Colors.blue[700],
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  elevation: 0,
                 ),
                 child: const Text('Coba Lagi'),
               ),
@@ -526,7 +591,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.grey.withOpacity(0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -537,7 +602,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
           children: [
             Icon(
               Icons.receipt_long_outlined,
-              size: 64,
+              size: 60,
               color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
@@ -549,11 +614,11 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Belum ada riwayat pembayaran untuk member ini',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.grey,
+                color: Colors.grey[600],
                 fontSize: 14,
               ),
             ),

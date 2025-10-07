@@ -8,6 +8,8 @@ import '../services/api_service.dart';
 import 'package:bendahara_app/pages/pemasukan_page.dart';
 import 'package:bendahara_app/pages/pengeluaran_page.dart';
 import 'package:bendahara_app/pages/riwayat_page.dart';
+import 'package:bendahara_app/pages/profile_page.dart';
+import 'package:bendahara_app/pages/about_page.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,12 +21,25 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Map<String, dynamic>>> _aktivitasFuture;
+  String _userName = 'Bendahara';
+  String _jabatan = 'OSIS';
 
   @override
   void initState() {
     super.initState();
     print('\n🚀 [HOME] HomeScreen initialized');
+    _loadUserData();
     _loadAktivitas();
+  }
+
+  Future<void> _loadUserData() async {
+    print('👤 [HOME] Memuat data user dari SharedPreferences...');
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userName = prefs.getString('userName') ?? 'Bendahara';
+      _jabatan = prefs.getString('jabatan') ?? 'OSIS';
+    });
+    print('✅ [HOME] User data loaded: $_userName - $_jabatan\n');
   }
 
   void _loadAktivitas() {
@@ -38,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
     print('🔄 [AKTIVITAS] Mulai fetch data aktivitas...');
     
     try {
-      // Ambil data pemasukan dan pengeluaran secara paralel
       print('📡 [AKTIVITAS] Mengirim request ke API...');
       final results = await Future.wait([
         ApiService.getPemasukan(),
@@ -54,7 +68,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       List<Map<String, dynamic>> aktivitas = [];
 
-      // Proses data pemasukan
       print('🔨 [AKTIVITAS] Memproses data pemasukan...');
       for (var item in pemasukan) {
         print('   📥 Pemasukan: ${item['keterangan']} - Rp ${item['jumlah']} (${item['tanggal']})');
@@ -67,7 +80,6 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
 
-      // Proses data pengeluaran
       print('🔨 [AKTIVITAS] Memproses data pengeluaran...');
       for (var item in pengeluaran) {
         print('   📤 Pengeluaran: ${item['keterangan']} - Rp ${item['jumlah']} (${item['tanggal']})');
@@ -82,7 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       print('📊 [AKTIVITAS] Total aktivitas sebelum sorting: ${aktivitas.length}');
 
-      // Urutkan berdasarkan tanggal terbaru
       print('🔄 [AKTIVITAS] Mengurutkan berdasarkan tanggal...');
       aktivitas.sort((a, b) {
         try {
@@ -95,7 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       });
 
-      // Ambil maksimal 5 data terakhir
       final result = aktivitas.take(5).toList();
       print('✅ [AKTIVITAS] Berhasil! Menampilkan ${result.length} aktivitas terbaru');
       print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
@@ -160,6 +170,132 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _showLogoutConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.logout_rounded,
+                    color: Colors.red[600],
+                    size: 32,
+                  ),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Keluar dari Aplikasi?',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[900],
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Apakah Anda yakin ingin keluar dari aplikasi?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: BorderSide(color: Colors.grey[300]!),
+                          ),
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          Navigator.pop(context);
+                          
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.clear();
+                          
+                          if (context.mounted) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => LoginPage()),
+                              (route) => false,
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[600],
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          'Keluar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showProfileMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -169,12 +305,12 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(28),
-            topRight: Radius.circular(28),
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 20,
               offset: Offset(0, -5),
             ),
@@ -185,8 +321,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Container(
               margin: EdgeInsets.only(top: 12),
-              width: 50,
-              height: 5,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(10),
@@ -200,12 +336,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     padding: EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue[600]!, Colors.blue[800]!],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.blue[600],
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.blue.withOpacity(0.3),
@@ -217,12 +349,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.all(15),
+                          padding: EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.person, color: Colors.white, size: 32),
+                          child: Icon(Icons.person_rounded, color: Colors.white, size: 28),
                         ),
                         SizedBox(width: 16),
                         Expanded(
@@ -230,19 +362,27 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Administrator',
+                                _userName,
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 20,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               SizedBox(height: 4),
-                              Text(
-                                'Bendahara Osis',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
-                                  fontSize: 14,
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _jabatan,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],
@@ -257,45 +397,46 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             _buildMenuItem(
               context,
-              icon: Icons.person_outline,
-              title: 'Profile',
+              icon: Icons.person_outline_rounded,
+              title: 'Profil Saya',
               iconColor: Colors.blue[600]!,
-              onTap: () => Navigator.pop(context),
+              bgColor: Colors.blue[50]!,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ProfilePage()),
+                );
+              },
             ),
             _buildMenuItem(
               context,
-              icon: Icons.settings_outlined,
-              title: 'Pengaturan',
+              icon: Icons.info_outline_rounded,
+              title: 'Tentang Aplikasi',
               iconColor: Colors.grey[700]!,
-              onTap: () => Navigator.pop(context),
+              bgColor: Colors.grey[100]!,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => AboutPage()),
+                );
+              },
             ),
-            _buildMenuItem(
-              context,
-              icon: Icons.help_outline,
-              title: 'Bantuan',
-              iconColor: Colors.grey[700]!,
-              onTap: () => Navigator.pop(context),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Divider(height: 1, color: Colors.grey[200]),
             ),
-            Divider(height: 32, thickness: 1),
             _buildMenuItem(
               context,
               icon: Icons.logout_rounded,
               title: 'Keluar',
-              iconColor: Colors.red[500]!,
-              textColor: Colors.red[500]!,
-              onTap: () async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.clear();
-                if (context.mounted) {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => LoginPage()),
-                    (route) => false,
-                  );
-                }
-              },
+              iconColor: Colors.red[600]!,
+              bgColor: Colors.red[50]!,
+              textColor: Colors.red[600]!,
+              onTap: () => _showLogoutConfirmation(context),
             ),
-            SizedBox(height: 32),
+            SizedBox(height: 24),
           ],
         ),
       ),
@@ -307,33 +448,36 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required String title,
     required Color iconColor,
+    required Color bgColor,
     Color? textColor,
     required VoidCallback onTap,
   }) {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        margin: EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Container(
               padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: bgColor,
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: iconColor, size: 22),
+              child: Icon(icon, color: iconColor, size: 20),
             ),
             SizedBox(width: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: textColor ?? Colors.grey[800],
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: textColor ?? Colors.grey[800],
+                ),
               ),
             ),
-            Spacer(),
             Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
           ],
         ),
@@ -344,7 +488,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -353,101 +497,91 @@ class _HomeScreenState extends State<HomeScreen> {
             await Future.delayed(Duration(milliseconds: 500));
             print('✅ [HOME] Refresh completed\n');
           },
+          color: Colors.blue[700],
           child: Column(
             children: [
-              // Enhanced Header with modern gradient
+              // Clean Header
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF1E3A8A),
-                      Color(0xFF2563EB),
-                      Color(0xFF3B82F6),
-                    ],
-                  ),
+                  color: Colors.blue[700],
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: Offset(0, 10),
+                      color: Colors.blue.withOpacity(0.2),
+                      blurRadius: 15,
+                      offset: Offset(0, 5),
                     ),
                   ],
                 ),
                 child: Column(
                   children: [
                     Padding(
-                      padding: EdgeInsets.fromLTRB(24, 20, 24, 24),
+                      padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.3),
-                                    width: 1.5,
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.account_balance_wallet_rounded,
+                                    color: Colors.white,
+                                    size: 24,
                                   ),
                                 ),
-                                child: Icon(
-                                  Icons.account_balance_wallet_rounded,
-                                  color: Colors.white,
-                                  size: 26,
+                                SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Selamat Datang',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        _userName,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Selamat Datang',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  SizedBox(height: 2),
-                                  Text(
-                                    'Bendahara Osis',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           GestureDetector(
                             onTap: () => _showProfileMenu(context),
                             child: Container(
-                              padding: EdgeInsets.all(4),
+                              padding: EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.15),
-                                    blurRadius: 10,
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
                                     offset: Offset(0, 4),
                                   ),
                                 ],
                               ),
-                              child: CircleAvatar(
-                                radius: 22,
-                                backgroundColor: Colors.blue[50],
-                                child: Icon(
-                                  Icons.person_rounded,
-                                  color: Colors.blue[700],
-                                  size: 24,
-                                ),
+                              child: Icon(
+                                Icons.person_rounded,
+                                color: Colors.blue[700],
+                                size: 22,
                               ),
                             ),
                           ),
@@ -457,37 +591,34 @@ class _HomeScreenState extends State<HomeScreen> {
                     
                     // Balance Card
                     Padding(
-                      padding: EdgeInsets.fromLTRB(24, 0, 24, 24),
+                      padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
                       child: Container(
                         padding: EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: Colors.white.withOpacity(0.3),
                             width: 1.5,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 15,
-                              offset: Offset(0, 5),
-                            ),
-                          ],
                         ),
                         child: FutureBuilder<Map<String, dynamic>>(
                           future: ApiService.getLaporan(),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return Center(
-                                child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16),
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    strokeWidth: 2.5,
+                                  ),
                                 ),
                               );
                             } else if (snapshot.hasError) {
                               return Text(
                                 'Error: ${snapshot.error}',
-                                style: TextStyle(color: Colors.white70),
+                                style: TextStyle(color: Colors.white70, fontSize: 13),
                               );
                             } else {
                               final laporan = snapshot.data!;
@@ -500,14 +631,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Icon(
                                         Icons.account_balance_wallet_outlined,
                                         color: Colors.white.withOpacity(0.9),
-                                        size: 20,
+                                        size: 18,
                                       ),
                                       SizedBox(width: 8),
                                       Text(
-                                        'Total Saldo Kelas',
+                                        'Total Saldo Kas',
                                         style: TextStyle(
                                           color: Colors.white.withOpacity(0.95),
-                                          fontSize: 14,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -520,7 +651,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: Colors.white,
                                       fontSize: 32,
                                       fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
                                     ),
                                   ),
                                 ],
@@ -534,18 +664,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Quick Actions with modern cards
+              // Quick Actions
               Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                color: Colors.grey[50],
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Row(
                   children: [
                     Expanded(
-                      child: _buildModernQuickAction(
+                      child: _buildQuickAction(
                         context,
-                        icon: Icons.add_circle_rounded,
+                        icon: Icons.add_circle_outline_rounded,
                         label: 'Pemasukan',
-                        gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
+                        color: Colors.green[600]!,
                         onTap: () async {
                           print('➕ [HOME] Navigasi ke halaman Pemasukan');
                           await Navigator.push(
@@ -559,11 +689,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     SizedBox(width: 12),
                     Expanded(
-                      child: _buildModernQuickAction(
+                      child: _buildQuickAction(
                         context,
-                        icon: Icons.remove_circle_rounded,
+                        icon: Icons.remove_circle_outline_rounded,
                         label: 'Pengeluaran',
-                        gradientColors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                        color: Colors.red[600]!,
                         onTap: () async {
                           print('➖ [HOME] Navigasi ke halaman Pengeluaran');
                           await Navigator.push(
@@ -577,11 +707,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     SizedBox(width: 12),
                     Expanded(
-                      child: _buildModernQuickAction(
+                      child: _buildQuickAction(
                         context,
-                        icon: Icons.warning_rounded,
-                        label: 'Rekap Pelanggaran',
-                        gradientColors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                        icon: Icons.assessment_outlined,
+                        label: 'Rekap',
+                        color: Colors.blue[700]!,
                         onTap: () {
                           Navigator.push(
                             context,
@@ -600,23 +730,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: Colors.grey[50],
                   child: SingleChildScrollView(
                     physics: AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.all(24),
+                    padding: EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Statistics Card
                         StatCardWidget(),
 
-                        SizedBox(height: 28),
+                        SizedBox(height: 24),
 
-                        // Recent Activities Header
+                        // Activities Header
                         Row(
                           children: [
                             Container(
                               width: 4,
                               height: 24,
                               decoration: BoxDecoration(
-                                color: Colors.blue[600],
+                                color: Colors.blue[700],
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -624,7 +754,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               'Aktivitas Terbaru',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey[900],
                               ),
@@ -634,7 +764,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         
                         SizedBox(height: 16),
 
-                        // Activity items from database
+                        // Activity items
                         FutureBuilder<List<Map<String, dynamic>>>(
                           future: _aktivitasFuture,
                           builder: (context, snapshot) {
@@ -645,7 +775,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               return Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(32),
-                                  child: CircularProgressIndicator(),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[700]!),
+                                  ),
                                 ),
                               );
                             } else if (snapshot.hasError) {
@@ -653,17 +786,46 @@ class _HomeScreenState extends State<HomeScreen> {
                               return Container(
                                 padding: EdgeInsets.all(20),
                                 decoration: BoxDecoration(
-                                  color: Colors.red[50],
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.red[100]!),
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.error_outline, color: Colors.red[700]),
-                                    SizedBox(width: 12),
+                                    Container(
+                                      padding: EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red[50],
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        Icons.error_outline_rounded,
+                                        color: Colors.red[600],
+                                        size: 22,
+                                      ),
+                                    ),
+                                    SizedBox(width: 14),
                                     Expanded(
-                                      child: Text(
-                                        'Gagal memuat aktivitas',
-                                        style: TextStyle(color: Colors.red[700]),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Terjadi Kesalahan',
+                                            style: TextStyle(
+                                              color: Colors.red[700],
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 2),
+                                          Text(
+                                            'Gagal memuat aktivitas',
+                                            style: TextStyle(
+                                              color: Colors.red[600],
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -674,23 +836,38 @@ class _HomeScreenState extends State<HomeScreen> {
                               return Container(
                                 padding: EdgeInsets.all(32),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[100],
+                                  color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Column(
                                   children: [
-                                    Icon(
-                                      Icons.inbox_outlined,
-                                      size: 48,
-                                      color: Colors.grey[400],
+                                    Container(
+                                      padding: EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.inbox_outlined,
+                                        size: 40,
+                                        color: Colors.grey[400],
+                                      ),
                                     ),
-                                    SizedBox(height: 12),
+                                    SizedBox(height: 16),
                                     Text(
-                                      'Belum ada aktivitas',
+                                      'Belum Ada Aktivitas',
                                       style: TextStyle(
                                         fontSize: 16,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey[800],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 6),
+                                    Text(
+                                      'Transaksi Anda akan muncul di sini',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[500],
                                       ),
                                     ),
                                   ],
@@ -707,12 +884,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 print('   📌 ${isPemasukan ? "Pemasukan" : "Pengeluaran"}: ${item['title']} - ${item['amount']}');
                                 
                                 return Padding(
-                                  padding: EdgeInsets.only(bottom: 12),
-                                  child: ActivityItemWidget(
+                                  padding: EdgeInsets.only(bottom: 10),
+                                  child: _buildActivityItem(
                                     title: item['title'],
                                     amount: _formatCurrency(item['amount']),
-                                    color: isPemasukan ? Colors.green[500]! : Colors.red[500]!,
-                                    icon: isPemasukan ? Icons.arrow_downward : Icons.arrow_upward,
+                                    isPemasukan: isPemasukan,
                                     time: _formatRelativeTime(item['tanggal']),
                                   ),
                                 );
@@ -721,7 +897,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
 
-                        SizedBox(height: 100),
+                        SizedBox(height: 80),
                       ],
                     ),
                   ),
@@ -734,29 +910,110 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildModernQuickAction(
+  // Activity Item Widget
+  Widget _buildActivityItem({
+    required String title,
+    required String amount,
+    required bool isPemasukan,
+    required String time,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isPemasukan ? Colors.green[50] : Colors.red[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isPemasukan ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+              color: isPemasukan ? Colors.green[600] : Colors.red[600],
+              size: 20,
+            ),
+          ),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 12,
+                      color: Colors.grey[400],
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      time,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 10),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isPemasukan ? Colors.green[600] : Colors.red[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Quick Action Widget
+  Widget _buildQuickAction(
     BuildContext context, {
     required IconData icon,
     required String label,
-    required List<Color> gradientColors,
+    required Color color,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 10),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: gradientColors[0].withOpacity(0.4),
-              blurRadius: 12,
-              offset: Offset(0, 6),
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 10,
+              offset: Offset(0, 2),
             ),
           ],
         ),
@@ -765,21 +1022,21 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
-                borderRadius: BorderRadius.circular(12),
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
-                color: Colors.white,
-                size: 28,
+                color: color,
+                size: 22,
               ),
             ),
-            SizedBox(height: 12),
+            SizedBox(height: 8),
             Text(
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white,
+                color: Colors.grey[800],
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
