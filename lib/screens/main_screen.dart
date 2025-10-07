@@ -12,8 +12,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
-  AnimationController? _fabAnimController;
-  Animation<double>? _fabScaleAnimation;
 
   final List<Widget> _screens = [
     HomeScreen(),
@@ -27,32 +25,9 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
     _NavItem(icon: Icons.people_outline_rounded, label: 'Anggota', activeIcon: Icons.people_rounded),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _fabAnimController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 200),
-    );
-    _fabScaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
-      CurvedAnimation(parent: _fabAnimController!, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _fabAnimController?.dispose();
-    super.dispose();
-  }
-
   void _onNavTap(int index) {
     if (_currentIndex != index) {
       setState(() => _currentIndex = index);
-      
-      // Animate FAB when switching to transaction screen
-      if (index == 1 && _fabAnimController != null) {
-        _fabAnimController!.forward().then((_) => _fabAnimController!.reverse());
-      }
     }
   }
 
@@ -64,52 +39,32 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
         index: _currentIndex,
         children: _screens,
       ),
-      floatingActionButton: _fabScaleAnimation != null
-          ? ScaleTransition(
-              scale: _fabScaleAnimation!,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.0, end: _currentIndex == 1 ? 0.25 : 0.0),
-                duration: Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                builder: (context, rotation, child) {
-                  return Transform.rotate(
-                    angle: rotation * 3.14159, // π radians = 180 degrees
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xFF1976D2).withOpacity(_currentIndex == 1 ? 0.5 : 0.4),
-                            blurRadius: _currentIndex == 1 ? 25 : 20,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _onNavTap(1),
-                          customBorder: CircleBorder(),
-                          child: Icon(
-                            _currentIndex == 1 ? Icons.close_rounded : Icons.add_rounded,
-                            size: 32,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            )
-          : null,
+      floatingActionButton: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0xFF1976D2).withOpacity(0.4),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Icon(
+            Icons.groups_rounded,
+            size: 32,
+            color: Colors.white,
+          ),
+        ),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: _buildModernBottomBar(),
     );

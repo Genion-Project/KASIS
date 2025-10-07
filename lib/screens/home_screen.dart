@@ -635,7 +635,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       SizedBox(width: 8),
                                       Text(
-                                        'Total Saldo Kas',
+                                        'Total Kas Osis',
                                         style: TextStyle(
                                           color: Colors.white.withOpacity(0.95),
                                           fontSize: 13,

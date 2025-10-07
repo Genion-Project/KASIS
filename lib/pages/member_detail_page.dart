@@ -16,7 +16,7 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
   late Future<List<Map<String, dynamic>>> _paymentsFuture;
   bool _isLoading = false;
   String _userRole = '';
-  bool _canPayKas = true; // Default true
+  bool _canPayKas = true;
 
   @override
   void initState() {
@@ -29,7 +29,6 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _userRole = prefs.getString('jabatan') ?? '';
-      // Hanya Bendahara dan OSIS yang bisa bayar kas
       _canPayKas = _userRole != 'Anggota' && _userRole != 'Guru';
     });
     print('🔐 [ROLE] User role: $_userRole, Can pay: $_canPayKas');
@@ -53,6 +52,161 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
 
   Future<void> _refreshData() async {
     await _loadPayments();
+  }
+
+  Future<void> _handleBayar(Map<String, dynamic> payment) async {
+    try {
+      print('💰 [BAYAR] Membayar kas minggu ${payment['week']}');
+      
+      await ApiService.bayarKas(
+        siswaId: widget.memberId,
+        mingguKe: payment['week'],
+      );
+
+      setState(() {
+        payment['status'] = 'Sudah Bayar';
+        payment['amount'] = 2000;
+        payment['description'] = 'Kas Mingguan';
+      });
+      
+      print('✅ [BAYAR] Berhasil bayar kas');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Pembayaran berhasil'),
+              ],
+            ),
+            backgroundColor: Colors.green[600],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ [BAYAR] Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('Gagal bayar: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red[600],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleBatalBayar(Map<String, dynamic> payment) async {
+    // Konfirmasi dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 28),
+            SizedBox(width: 12),
+            Text('Konfirmasi'),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin membatalkan pembayaran minggu ${payment['week']}?',
+          style: TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Batal', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[600],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+            child: Text('Ya, Batalkan', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      print('🔄 [BATAL] Membatalkan pembayaran minggu ${payment['week']}');
+      
+      await ApiService.batalkanBayar(
+        siswaId: widget.memberId,
+        mingguKe: payment['week'],
+      );
+
+      setState(() {
+        payment['status'] = 'Belum Bayar';
+        payment['amount'] = 0;
+        payment['description'] = '-';
+        payment['date'] = '-';
+      });
+      
+      print('✅ [BATAL] Berhasil membatalkan pembayaran');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Pembayaran berhasil dibatalkan'),
+              ],
+            ),
+            backgroundColor: Colors.orange[600],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ [BATAL] Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('Gagal membatalkan: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red[600],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -399,83 +553,57 @@ class _MemberDetailPageState extends State<MemberDetailPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    // Tampilkan tombol bayar HANYA jika user bukan Anggota/Guru DAN belum bayar
-                    if (!isPaid && _canPayKas)
+                    // Tampilkan tombol sesuai kondisi dan role
+                    if (_canPayKas)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              print('💰 [BAYAR] Membayar kas minggu ${payment['week']}');
-                              
-                              // Panggil API bayar
-                              await ApiService.bayarKas(
-                                siswaId: widget.memberId,
-                                mingguKe: payment['week'],
-                              );
-
-                              // Update state lokal
-                              setState(() {
-                                payment['status'] = 'Sudah Bayar';
-                                payment['amount'] = 2000;
-                                payment['description'] = 'Kas Mingguan';
-                              });
-                              
-                              print('✅ [BAYAR] Berhasil bayar kas');
-                              
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      Icon(Icons.check_circle, color: Colors.white),
-                                      SizedBox(width: 8),
-                                      Text('Pembayaran berhasil'),
-                                    ],
-                                  ),
-                                  backgroundColor: Colors.green[600],
-                                  behavior: SnackBarBehavior.floating,
+                        child: Row(
+                          children: [
+                            // Tombol Bayar - hanya muncul jika belum bayar
+                            if (!isPaid)
+                              ElevatedButton(
+                                onPressed: () => _handleBayar(payment),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue[600],
+                                  minimumSize: const Size(80, 32),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  'Bayar',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              );
-                            } catch (e) {
-                              print('❌ [BAYAR] Error: $e');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Row(
-                                    children: [
-                                      Icon(Icons.error, color: Colors.white),
-                                      SizedBox(width: 8),
-                                      Expanded(child: Text('Gagal bayar: $e')),
-                                    ],
-                                  ),
+                              ),
+                            // Tombol Batal Bayar - hanya muncul jika sudah bayar
+                            if (isPaid)
+                              ElevatedButton(
+                                onPressed: () => _handleBatalBayar(payment),
+                                style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.red[600],
-                                  behavior: SnackBarBehavior.floating,
+                                  minimumSize: const Size(100, 32),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  'Batal Bayar',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue[600],
-                            minimumSize: const Size(80, 32),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Bayar',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                              ),
+                          ],
                         ),
                       ),
                   ],
