@@ -45,6 +45,24 @@ class ApiService {
     }
   }
 
+  /// ✅ TAMBAHAN: Hapus pelanggaran berdasarkan ID
+  static Future<bool> deletePelanggaran(int id) async {
+    try {
+      final url = Uri.parse('$baseUrl/pelanggaran/$id');
+      final response = await http.delete(url);
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        print('❌ Gagal hapus pelanggaran: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error deletePelanggaran: $e');
+      return false;
+    }
+  }
+
   // Ambil semua members dengan total kas yang sudah dibayar
   static Future<List<Map<String, dynamic>>> getMembers() async {
     final url = Uri.parse('$baseUrl/members');
@@ -198,7 +216,7 @@ class ApiService {
     }
   }
 
-  // Ambil semua pemasukan (FIXED: tambahkan static)
+  // Ambil semua pemasukan
   static Future<List<dynamic>> getPemasukan() async {
     try {
       final response = await http.get(Uri.parse("$baseUrl/pemasukan"));
@@ -218,7 +236,7 @@ class ApiService {
     }
   }
 
-  // Ambil semua pengeluaran (FIXED: tambahkan static)
+  // Ambil semua pengeluaran
   static Future<List<dynamic>> getPengeluaran() async {
     try {
       final response = await http.get(Uri.parse("$baseUrl/pengeluaran"));
@@ -267,11 +285,11 @@ class ApiService {
       if (response.statusCode == 201) {
         return true;
       } else {
-        print("â Œ Gagal tambah pemasukan: ${response.body}");
+        print("❌ Gagal tambah pemasukan: ${response.body}");
         return false;
       }
     } catch (e) {
-      print("â Œ Error addPemasGagaukan: $e");
+      print("❌ Error addPemasukan: $e");
       return false;
     }
   }
@@ -300,11 +318,11 @@ class ApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return true;
       } else {
-        print("â Œ Gagal tambah pengeluaran: ${response.body}");
+        print("❌ Gagal tambah pengeluaran: ${response.body}");
         return false;
       }
     } catch (e) {
-      print("â Œ Error addPengeluaran: $e");
+      print("❌ Error addPengeluaran: $e");
       return false;
     }
   }

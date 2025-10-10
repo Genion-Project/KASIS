@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PelanggaranCard extends StatelessWidget {
+  final int? id; // Tambahan untuk ID pelanggaran
   final String nama;
   final String kelas;
   final String tanggal;
@@ -10,9 +11,11 @@ class PelanggaranCard extends StatelessWidget {
   final String keterangan;
   final IconData icon;
   final Color color;
+  final VoidCallback? onDelete; // Tambahan untuk callback hapus
 
   const PelanggaranCard({
     super.key,
+    this.id, // Optional
     required this.nama,
     required this.kelas,
     required this.tanggal,
@@ -22,6 +25,7 @@ class PelanggaranCard extends StatelessWidget {
     required this.keterangan,
     required this.icon,
     required this.color,
+    this.onDelete, // Optional
   });
 
   @override
@@ -141,38 +145,67 @@ class PelanggaranCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                color,
-                                color.withOpacity(0.8),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    color,
+                                    color.withOpacity(0.8),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: color.withOpacity(0.4),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '-$poin Poin',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
                             ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withOpacity(0.4),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
+                            // ✅ TOMBOL HAPUS (hanya muncul jika onDelete tidak null)
+                            if (onDelete != null) ...[
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () => _showDeleteDialog(context),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.red[200]!,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.delete_rounded,
+                                    color: Colors.red[700],
+                                    size: 20,
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
-                          child: Text(
-                            '-$poin Poin',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -332,6 +365,89 @@ class PelanggaranCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  // ✅ DIALOG KONFIRMASI HAPUS
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red[700],
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Hapus Pelanggaran?',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Data pelanggaran "$jenisPelanggaran" untuk $nama akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Batal',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                onDelete?.call();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[600],
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+              ),
+              child: const Text(
+                'Hapus',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

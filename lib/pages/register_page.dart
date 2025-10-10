@@ -21,7 +21,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
 
   // Step 2
   final TextEditingController kodeController = TextEditingController();
-  final String kodeVerifikasiBenar = "NEXORA2025";
+  final String kodeVerifikasiBenar = "KETOSIMUT";
 
   // Step 3
   final TextEditingController passwordController = TextEditingController();
