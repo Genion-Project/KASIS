@@ -303,7 +303,9 @@ class DetailKelasPage extends StatelessWidget {
       );
 
       // Close loading dialog
-      Navigator.pop(context);
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
 
       // Show preview and print dialog
       await Printing.layoutPdf(
@@ -312,7 +314,9 @@ class DetailKelasPage extends StatelessWidget {
 
     } catch (e) {
       // Close loading dialog if still open
-      Navigator.pop(context);
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
       
       // Show error dialog
       showDialog(
@@ -378,6 +382,908 @@ class DetailKelasPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 768;
+    
+    if (isDesktop) {
+      return _buildDesktopLayoutWithSidebar(context);
+    } else {
+      return _buildMobileLayout(context);
+    }
+  }
+
+  Widget _buildDesktopLayoutWithSidebar(BuildContext context) {
+    // Grouping data by student name
+    final Map<String, List<Map<String, dynamic>>> groupedByStudent = {};
+    final Map<String, int> severityCount = {'Rendah': 0, 'Sedang': 0, 'Tinggi': 0, 'Kritis': 0};
+    int totalPoinKelas = 0;
+    
+    for (var item in dataSiswa) {
+      final nama = item['nama'] ?? 'Tidak diketahui';
+      if (!groupedByStudent.containsKey(nama)) {               
+        groupedByStudent[nama] = [];
+      }
+      groupedByStudent[nama]!.add(item);
+      
+      // Calculate total points for class
+      final poin = item['poin'];
+      final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
+      totalPoinKelas += poinInt;
+    }
+
+    // Calculate severity distribution
+    for (var entry in groupedByStudent.entries) {
+      final totalPoinSiswa = entry.value.fold<int>(0, (sum, item) {
+        final poin = item['poin'];
+        final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
+        return sum + poinInt;
+      });
+
+      if (totalPoinSiswa >= 50) {
+        severityCount['Kritis'] = severityCount['Kritis']! + 1;
+      } else if (totalPoinSiswa >= 30) {
+        severityCount['Tinggi'] = severityCount['Tinggi']! + 1;
+      } else if (totalPoinSiswa >= 15) {
+        severityCount['Sedang'] = severityCount['Sedang']! + 1;
+      } else {
+        severityCount['Rendah'] = severityCount['Rendah']! + 1;
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Row(
+        children: [
+          // Sidebar
+          _buildDesktopSidebar(
+            context,
+            groupedByStudent: groupedByStudent,
+            totalPoinKelas: totalPoinKelas,
+            severityCount: severityCount,
+          ),
+          
+          // Main Content
+          Expanded(
+            child: Column(
+              children: [
+                // App Bar
+                Container(
+                  height: 70,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Detail Kelas $namaKelas',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          const SizedBox(width: 16),
+                          // Export Button
+                          ElevatedButton.icon(
+                            onPressed: () => _generatePDF(context),
+                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                            label: const Text('Export PDF'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF3B82F6),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Quick Stats
+                        _buildQuickStats(groupedByStudent),
+                        const SizedBox(height: 24),
+                        
+                        // Student Grid
+                        Expanded(
+                          child: _buildStudentGrid(context, groupedByStudent),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopSidebar(
+    BuildContext context, {
+    required Map<String, List<Map<String, dynamic>>> groupedByStudent,
+    required int totalPoinKelas,
+    required Map<String, int> severityCount,
+  }) {
+    return Container(
+      width: 320,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(2, 0),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB), Color(0xFF1E40AF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    ),
+                    child: const Icon(
+                      Icons.school_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    namaKelas,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${groupedByStudent.length} Siswa',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Class Summary
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ringkasan Kelas',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Total Points
+                  _buildSidebarStatItem(
+                    icon: Icons.assessment_rounded,
+                    iconColor: const Color(0xFF3B82F6),
+                    label: 'Total Poin Kelas',
+                    value: '$totalPoinKelas',
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Average Points
+                  _buildSidebarStatItem(
+                    icon: Icons.timeline_rounded,
+                    iconColor: const Color(0xFF10B981),
+                    label: 'Rata-rata Poin/Siswa',
+                    value: groupedByStudent.isEmpty ? '0' : '${(totalPoinKelas / groupedByStudent.length).toStringAsFixed(1)}',
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Severity Distribution
+                  const Text(
+                    'Distribusi Tingkat Pelanggaran',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  _buildSeverityBar(
+                    label: 'Kritis',
+                    count: severityCount['Kritis']!,
+                    total: groupedByStudent.length,
+                    color: const Color(0xFFDC2626),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  _buildSeverityBar(
+                    label: 'Tinggi',
+                    count: severityCount['Tinggi']!,
+                    total: groupedByStudent.length,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  _buildSeverityBar(
+                    label: 'Sedang',
+                    count: severityCount['Sedang']!,
+                    total: groupedByStudent.length,
+                    color: const Color(0xFFEAB308),
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  _buildSeverityBar(
+                    label: 'Rendah',
+                    count: severityCount['Rendah']!,
+                    total: groupedByStudent.length,
+                    color: const Color(0xFF10B981),
+                  ),
+                ],
+              ),
+            ),
+
+            // Actions
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _generatePDF(context),
+                      icon: const Icon(Icons.picture_as_pdf_rounded),
+                      label: const Text('Export Laporan PDF'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3B82F6),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      label: const Text('Kembali ke Rekap'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarStatItem({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeverityBar({
+    required String label,
+    required int count,
+    required int total,
+    required Color color,
+  }) {
+    final percentage = total == 0 ? 0.0 : (count / total * 100);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
+            ),
+            Text(
+              '$count siswa (${percentage.toStringAsFixed(1)}%)',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 6,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                flex: count,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: total - count,
+                child: const SizedBox(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickStats(Map<String, List<Map<String, dynamic>>> groupedByStudent) {
+    return Row(
+      children: [
+        _buildQuickStatCard(
+          icon: Icons.people_alt_rounded,
+          iconColor: const Color(0xFF3B82F6),
+          value: groupedByStudent.length.toString(),
+          label: 'Total Siswa',
+        ),
+        const SizedBox(width: 16),
+        _buildQuickStatCard(
+          icon: Icons.warning_amber_rounded,
+          iconColor: const Color(0xFFF59E0B),
+          value: dataSiswa.length.toString(),
+          label: 'Total Pelanggaran',
+        ),
+        const SizedBox(width: 16),
+        _buildQuickStatCard(
+          icon: Icons.assessment_rounded,
+          iconColor: const Color(0xFF10B981),
+          value: _calculateAveragePoints(groupedByStudent),
+          label: 'Rata-rata Poin',
+        ),
+      ],
+    );
+  }
+
+  String _calculateAveragePoints(Map<String, List<Map<String, dynamic>>> groupedByStudent) {
+    if (groupedByStudent.isEmpty) return '0.0';
+    
+    int totalPoints = 0;
+    for (var entry in groupedByStudent.entries) {
+      totalPoints += entry.value.fold<int>(0, (sum, item) {
+        final poin = item['poin'];
+        final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
+        return sum + poinInt;
+      });
+    }
+    
+    return (totalPoints / groupedByStudent.length).toStringAsFixed(1);
+  }
+
+  Widget _buildQuickStatCard({
+    required IconData icon,
+    required Color iconColor,
+    required String value,
+    required String label,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudentGrid(BuildContext context, Map<String, List<Map<String, dynamic>>> groupedByStudent) {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.3,
+      ),
+      itemCount: groupedByStudent.length,
+      itemBuilder: (context, index) {
+        final nama = groupedByStudent.keys.elementAt(index);
+        final pelanggaranSiswa = groupedByStudent[nama]!;
+        final totalPoin = pelanggaranSiswa.fold<int>(
+          0,
+          (sum, item) {
+            final poin = item['poin'];
+            final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
+            return (sum + poinInt).toInt();
+          },
+        );
+
+        return _buildDesktopStudentCard(
+          context,
+          nama: nama,
+          totalPelanggaran: pelanggaranSiswa.length,
+          totalPoin: totalPoin,
+          pelanggaranList: pelanggaranSiswa,
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopStudentCard(
+    BuildContext context, {
+    required String nama,
+    required int totalPelanggaran,
+    required int totalPoin,
+    required List<Map<String, dynamic>> pelanggaranList,
+  }) {
+    Color poinColor;
+    Color poinBgColor;
+    String severity;
+
+    if (totalPoin >= 50) {
+      poinColor = const Color(0xFFDC2626);
+      poinBgColor = const Color(0xFFFEE2E2);
+      severity = 'Kritis';
+    } else if (totalPoin >= 30) {
+      poinColor = const Color(0xFFF59E0B);
+      poinBgColor = const Color(0xFFFEF3C7);
+      severity = 'Tinggi';
+    } else if (totalPoin >= 15) {
+      poinColor = const Color(0xFFEAB308);
+      poinBgColor = const Color(0xFFFEF9C3);
+      severity = 'Sedang';
+    } else {
+      poinColor = const Color(0xFF10B981);
+      poinBgColor = const Color(0xFFD1FAE5);
+      severity = 'Rendah';
+    }
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () {
+          _showDesktopStudentDetail(
+            context,
+            nama: nama,
+            totalPoin: totalPoin,
+            pelanggaranList: pelanggaranList,
+            poinColor: poinColor,
+            severity: severity,
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [poinColor.withOpacity(0.8), poinColor],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.person_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      nama,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              Row(
+                children: [
+                  Icon(Icons.list_alt_rounded, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 6),
+                  Text(
+                    '$totalPelanggaran pelanggaran',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: poinBgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$totalPoin poin',
+                      style: TextStyle(
+                        color: poinColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: poinColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      severity,
+                      style: TextStyle(
+                        color: poinColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              Text(
+                'Klik untuk lihat detail →',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDesktopStudentDetail(
+    BuildContext context, {
+    required String nama,
+    required int totalPoin,
+    required List<Map<String, dynamic>> pelanggaranList,
+    required Color poinColor,
+    required String severity,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(40),
+        child: Container(
+          width: 600,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    nama,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 16),
+              
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: poinColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$totalPoin poin - $severity',
+                      style: TextStyle(
+                        color: poinColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${pelanggaranList.length} pelanggaran',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 20),
+              
+              Expanded(
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: pelanggaranList.length,
+                    itemBuilder: (context, index) {
+                      final pelanggaran = pelanggaranList[index];
+                      return _buildDesktopPelanggaranItem(pelanggaran);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopPelanggaranItem(Map<String, dynamic> pelanggaran) {
+    String displayTanggal = pelanggaran['tanggal'] ?? '-';
+    String displayWaktu = pelanggaran['waktu'] ?? '-';
+
+    try {
+      if (displayWaktu == '-' || displayWaktu.isEmpty) {
+        final parsed = DateTime.tryParse(displayTanggal);
+        if (parsed != null) {
+          displayTanggal = DateFormat('dd MMM yyyy').format(parsed);
+          displayWaktu = DateFormat('HH:mm').format(parsed);
+        }
+      }
+    } catch (_) {}
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC2626).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${pelanggaran['poin']?.toInt() ?? 0} poin',
+              style: const TextStyle(
+                color: Color(0xFFDC2626),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pelanggaran['jenis_pelanggaran'] ?? '-',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Text(
+                      displayTanggal,
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(Icons.access_time_rounded, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Text(
+                      displayWaktu,
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
+                if (pelanggaran['keterangan'] != null && pelanggaran['keterangan'] != '-') ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Keterangan: ${pelanggaran['keterangan']}',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
     // Grouping data by student name
     final Map<String, List<Map<String, dynamic>>> groupedByStudent = {};
     
@@ -408,7 +1314,6 @@ class DetailKelasPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Tombol Export PDF
           IconButton(
             icon: const Icon(Icons.picture_as_pdf_rounded),
             tooltip: 'Export ke PDF',
@@ -457,7 +1362,7 @@ class DetailKelasPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatCard(
+                    _buildMobileStatCard(
                       'Total Siswa',
                       groupedByStudent.length.toString(),
                       Icons.people_alt_rounded,
@@ -467,7 +1372,7 @@ class DetailKelasPage extends StatelessWidget {
                       height: 50,
                       color: Colors.white.withOpacity(0.3),
                     ),
-                    _buildStatCard(
+                    _buildMobileStatCard(
                       'Total Pelanggaran',
                       dataSiswa.length.toString(),
                       Icons.warning_amber_rounded,
@@ -475,7 +1380,6 @@ class DetailKelasPage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                // Tombol Export PDF (alternatif di body)
                 ElevatedButton.icon(
                   onPressed: () => _generatePDF(context),
                   icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
@@ -517,7 +1421,7 @@ class DetailKelasPage extends StatelessWidget {
                   },
                 );
 
-                return _buildStudentCard(
+                return _buildMobileStudentCard(
                   context,
                   nama: nama,
                   totalPelanggaran: pelanggaranSiswa.length,
@@ -532,7 +1436,7 @@ class DetailKelasPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon) {
+  Widget _buildMobileStatCard(String label, String value, IconData icon) {
     return Column(
       children: [
         Container(
@@ -568,7 +1472,7 @@ class DetailKelasPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStudentCard(
+  Widget _buildMobileStudentCard(
     BuildContext context, {
     required String nama,
     required int totalPelanggaran,
@@ -613,7 +1517,6 @@ class DetailKelasPage extends StatelessWidget {
       child: Theme(
         data: Theme.of(context).copyWith(
           dividerColor: Colors.transparent,
-          splashColor: Colors.blue.withOpacity(0.05),
         ),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -712,7 +1615,7 @@ class DetailKelasPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: pelanggaranList.map((pelanggaran) {
-                  return _buildPelanggaranItem(
+                  return _buildMobilePelanggaranItem(
                     jenis: pelanggaran['jenis_pelanggaran'] ?? '-',
                     poin: pelanggaran['poin']?.toInt() ?? 0,
                     tanggal: pelanggaran['tanggal'] ?? '-',
@@ -728,19 +1631,17 @@ class DetailKelasPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPelanggaranItem({
+  Widget _buildMobilePelanggaranItem({
     required String jenis,
     required int poin,
     required String tanggal,
     required String waktu,
     required String keterangan,
   }) {
-    // Default value
     String displayTanggal = tanggal;
     String displayWaktu = waktu;
 
     try {
-      // Kalau waktu kosong, cek apakah tanggal berisi timestamp
       if (waktu == '-' || waktu.isEmpty) {
         final parsed = DateTime.tryParse(tanggal);
         if (parsed != null) {
@@ -748,9 +1649,7 @@ class DetailKelasPage extends StatelessWidget {
           displayWaktu = DateFormat('HH:mm').format(parsed);
         }
       }
-    } catch (_) {
-      // biarkan default kalau parsing gagal
-    }
+    } catch (_) {}
 
     return Container(
       margin: const EdgeInsets.only(top: 8),

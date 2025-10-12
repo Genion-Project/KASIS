@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../screens/main_screen.dart';
-import '../pages/register_page.dart'; // tambahkan import untuk register page
+import '../pages/register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -50,6 +50,262 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > 768;
+    
+    if (isDesktop) {
+      return _buildDesktopLayout(context);
+    } else {
+      return _buildMobileLayout(context);
+    }
+  }
+
+  Widget _buildDesktopLayout(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      body: Row(
+        children: [
+          // Left Side - Illustration/Info
+          Expanded(
+            flex: 2,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1976D2), Color(0xFF1565C0), Color(0xFF0D47A1)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Stack(
+                children: [
+                  // Background decorative elements
+                  Positioned(
+                    top: -100,
+                    right: -100,
+                    child: Container(
+                      width: 300,
+                      height: 300,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: -80,
+                    left: -80,
+                    child: Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  
+                  // Content
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(60),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(30),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 30,
+                                  offset: Offset(0, 15),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.account_balance_wallet_rounded,
+                              size: 80,
+                              color: Color(0xFF1976D2),
+                            ),
+                          ),
+                          SizedBox(height: 40),
+                          Text(
+                            'Selamat Datang',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 42,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Sistem Manajemen Pelanggaran Siswa',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w400,
+                              height: 1.4,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Masuk untuk mengakses dashboard dan fitur lengkap aplikasi',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Right Side - Login Form
+          Expanded(
+            flex: 1,
+            child: Container(
+              constraints: BoxConstraints(maxWidth: 500),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 60, vertical: 40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header for desktop
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Masuk ke Akun',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Silakan masuk menggunakan email dan password',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 40),
+
+                    // Form Fields
+                    _buildTextField(
+                      emailController,
+                      'Email',
+                      Icons.email_outlined,
+                      false,
+                      isDesktop: true,
+                    ),
+                    SizedBox(height: 20),
+                    
+                    _buildTextField(
+                      passwordController,
+                      'Password',
+                      Icons.lock_outline_rounded,
+                      true,
+                      isDesktop: true,
+                    ),
+
+                    // Forgot Password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          // TODO: Implement forgot password
+                        },
+                        child: Text(
+                          'Lupa Password?',
+                          style: TextStyle(
+                            color: Color(0xFF1976D2),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    SizedBox(height: 8),
+                    
+                    // Error Message
+                    if (errorMsg.isNotEmpty) ...[
+                      _buildErrorMsg(),
+                      SizedBox(height: 20),
+                    ],
+                    
+                    // Login Button
+                    _buildLoginButton(isDesktop: true),
+                    
+                    SizedBox(height: 30),
+                    
+                    // Divider
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'atau',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                      ],
+                    ),
+                    
+                    SizedBox(height: 30),
+                    
+                    // Register Link
+                    _buildRegisterLink(isDesktop: true),
+                    
+                    SizedBox(height: 30),
+                    
+                    // Terms
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        'Dengan masuk, Anda menyetujui syarat dan ketentuan kami',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
@@ -274,12 +530,13 @@ class _LoginPageState extends State<LoginPage> {
     TextEditingController controller,
     String label,
     IconData icon,
-    bool isPassword,
-  ) {
+    bool isPassword, {
+    bool isDesktop = false,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -291,21 +548,28 @@ class _LoginPageState extends State<LoginPage> {
       child: TextField(
         controller: controller,
         obscureText: isPassword && !_isPasswordVisible,
-        style: TextStyle(fontSize: 16, color: Colors.black87),
+        style: TextStyle(
+          fontSize: isDesktop ? 15 : 16, 
+          color: Colors.black87
+        ),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(
             color: Colors.grey[600],
-            fontSize: 15,
+            fontSize: isDesktop ? 14 : 15,
           ),
           prefixIcon: Container(
             margin: EdgeInsets.all(12),
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: Color(0xFF1976D2).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isDesktop ? 10 : 12),
             ),
-            child: Icon(icon, color: Color(0xFF1976D2), size: 20),
+            child: Icon(
+              icon, 
+              color: Color(0xFF1976D2), 
+              size: isDesktop ? 18 : 20
+            ),
           ),
           suffixIcon: isPassword
               ? IconButton(
@@ -314,27 +578,30 @@ class _LoginPageState extends State<LoginPage> {
                         ? Icons.visibility_rounded
                         : Icons.visibility_off_rounded,
                     color: Colors.grey[600],
-                    size: 22,
+                    size: isDesktop ? 20 : 22,
                   ),
                   onPressed: () =>
                       setState(() => _isPasswordVisible = !_isPasswordVisible),
                 )
               : null,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
             borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
             borderSide: BorderSide(color: Color(0xFF1976D2), width: 2),
           ),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 16 : 20, 
+            vertical: isDesktop ? 16 : 18
+          ),
         ),
       ),
     );
@@ -374,11 +641,11 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildLoginButton() {
+  Widget _buildLoginButton({bool isDesktop = false}) {
     return Container(
-      height: 58,
+      height: isDesktop ? 52 : 58,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
         gradient: LinearGradient(
           colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
           begin: Alignment.centerLeft,
@@ -398,7 +665,7 @@ class _LoginPageState extends State<LoginPage> {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
           ),
         ),
         child: isLoading
@@ -414,7 +681,7 @@ class _LoginPageState extends State<LoginPage> {
                 'Masuk',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: isDesktop ? 15 : 16,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.5,
                 ),
@@ -423,12 +690,12 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildRegisterLink() {
+  Widget _buildRegisterLink({bool isDesktop = false}) {
     return Container(
-      height: 58,
+      height: isDesktop ? 52 : 58,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
         border: Border.all(color: Color(0xFF1976D2), width: 2),
         boxShadow: [
           BoxShadow(
@@ -447,7 +714,7 @@ class _LoginPageState extends State<LoginPage> {
         },
         style: TextButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
           ),
         ),
         child: Row(
@@ -457,7 +724,7 @@ class _LoginPageState extends State<LoginPage> {
               'Belum punya akun?',
               style: TextStyle(
                 color: Colors.grey[700],
-                fontSize: 15,
+                fontSize: isDesktop ? 14 : 15,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -466,7 +733,7 @@ class _LoginPageState extends State<LoginPage> {
               'Daftar',
               style: TextStyle(
                 color: Color(0xFF1976D2),
-                fontSize: 15,
+                fontSize: isDesktop ? 14 : 15,
                 fontWeight: FontWeight.bold,
               ),
             ),

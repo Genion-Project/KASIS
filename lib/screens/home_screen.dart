@@ -800,7 +800,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Dashboard Overview',
+                          'Dashboard',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -809,7 +809,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         SizedBox(height: 6),
                         Text(
-                          'Kelola keuangan OSIS dengan mudah',
+                          'Kelola Manajemen dengan mudah',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -1060,19 +1060,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             ],
-                          ),
-                          TextButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => RiwayatPage()),
-                              );
-                            },
-                            icon: Icon(Icons.arrow_forward_rounded, size: 18),
-                            label: Text('Lihat Semua'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.blue[700],
-                            ),
                           ),
                         ],
                       ),
