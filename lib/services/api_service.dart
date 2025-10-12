@@ -341,4 +341,36 @@ class ApiService {
       throw Exception('Terjadi kesalahan: $e');
     }
   }
+
+  static Future<Map<String, dynamic>> batalkanBayar({
+    required int siswaId,
+    required int mingguKe,
+  }) async {
+    final url = Uri.parse('$baseUrl/batalkan_bayar');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'siswa_id': siswaId,
+          'minggu_ke': mingguKe,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // berhasil
+        return jsonDecode(response.body);
+      } else if (response.statusCode == 404) {
+        // data tidak ditemukan
+        return jsonDecode(response.body);
+      } else {
+        // gagal (500 atau lainnya)
+        final body = jsonDecode(response.body);
+        throw Exception(body['error'] ?? 'Gagal membatalkan pembayaran');
+      }
+    } catch (e) {
+      throw Exception('Terjadi kesalahan koneksi: $e');
+    }
+  }
 }
