@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'main_screen.dart';
-import '../pages/login_page.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,33 +12,70 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkLogin();
+    _checkAppState();
   }
 
-  Future<void> _checkLogin() async {
+  Future<void> _checkAppState() async {
+    // Tunggu 2 detik untuk tampilan splash
+    await Future.delayed(const Duration(seconds: 2));
+    
     final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-
-    await Future.delayed(const Duration(seconds: 1)); // animasi loading
-
+    
+    // Cek status login terlebih dahulu (prioritas utama)
+    // Sesuaikan dengan key yang digunakan di login_page.dart
+    bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+    
+    if (!mounted) return;
+    
     if (isLoggedIn) {
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => MainScreen()), // tanpa const
-        );
-        } else {
-        Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => LoginPage()), // tanpa const
-        );
+      // User sudah login, langsung ke MainScreen
+      Navigator.pushReplacementNamed(context, '/main');
+    } else {
+      // User belum login, cek apakah sudah pernah lihat onboarding
+      bool hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
+      
+      if (hasSeenOnboarding) {
+        // Sudah pernah lihat onboarding, ke login
+        Navigator.pushReplacementNamed(context, '/login');
+      } else {
+        // Pertama kali buka app, tampilkan onboarding
+        Navigator.pushReplacementNamed(context, '/onboarding');
+      }
     }
-
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+    return Scaffold(
+      backgroundColor: Colors.blue,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Ganti Icon dengan Image.asset untuk logo PNG
+            Image.asset(
+              'assets/images/logo.png', // path ke logo Anda
+              width: 150,
+              height: 150,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'OSIS SMK NURUL ISLAM',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 48),
+            const CircularProgressIndicator(
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
