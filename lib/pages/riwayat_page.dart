@@ -467,7 +467,7 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
           ),
           const SizedBox(height: 16),
           const Text(
-            'Total Pelanggaran',
+            'Total Pelanggaran Hari ini',
             style: TextStyle(
               color: Colors.white70,
               fontSize: 14,
@@ -574,7 +574,7 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
           const SizedBox(height: 12),
           _buildQuickAction(
             icon: Icons.add_circle_outline,
-            label: 'Tambah Kasus',
+            label: 'Tambah Pelanggaran',
             color: const Color(0xFF10B981),
             onTap: _showInputDialog,
           ),
@@ -772,7 +772,7 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '${filteredData.length} Kasus',
+                        '${filteredData.length} Pelanggaran',
                         style: const TextStyle(
                           color: _primaryColor,
                           fontWeight: FontWeight.w700,
@@ -1202,48 +1202,84 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
   // ==================== MOBILE LAYOUT ====================
   Widget _buildMobileLayout() {
     return Scaffold(
-      backgroundColor: _backgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          'Rekap Pelanggaran',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list_rounded),
-            onPressed: () {
-              // Show filter bottom sheet
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          FilterTabs(
-            activeFilter: activeFilter,
-            onFilterChanged: _onFilterChanged,
-          ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              children: [
-                _buildMobileSemuaPage(),
-                _buildMobileRekapPage(),
-              ],
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
+            pinned: true,
+            backgroundColor: Colors.white,
+            foregroundColor: const Color(0xFF1A1A1A),
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Rekap Pelanggaran',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A1A),
+                    ),
+                  ),
+                  Text(
+                    'Monitoring & Statistik',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.tune_rounded),
+                onPressed: () {},
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFFF1F3F5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
           ),
         ],
+        body: Column(
+          children: [
+            Container(
+              color: Colors.white,
+              child: FilterTabs(
+                activeFilter: activeFilter,
+                onFilterChanged: _onFilterChanged,
+              ),
+            ),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                children: [
+                  _buildMobileSemuaPage(),
+                  _buildMobileRekapPage(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _showInputDialog,
         backgroundColor: _primaryColor,
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
+        elevation: 4,
+        child: const Icon(Icons.add_rounded, size: 24),
       ),
     );
   }
@@ -1253,7 +1289,7 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
       future: pelanggaranFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2.5));
         }
         if (snapshot.hasError) {
           return _buildErrorState(snapshot.error.toString());
@@ -1264,31 +1300,37 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
 
         final filteredData = _filterByDateRange(snapshot.data!);
 
-        return Column(
-          children: [
-            HeaderSummary(
-              totalPelanggaran: filteredData.length,
-              pelanggaranBulanIni: _getPelanggaranBulanIni(snapshot.data!),
-              pelanggaranMingguIni: _getPelanggaranMingguIni(snapshot.data!),
+        return CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: HeaderSummary(
+                totalPelanggaran: filteredData.length,
+                pelanggaranBulanIni: _getPelanggaranBulanIni(snapshot.data!),
+                pelanggaranMingguIni: _getPelanggaranMingguIni(snapshot.data!),
+              ),
             ),
-            FilterSection(
-              selectedDateRange: selectedDateRange,
-              onRekapPressed: _showRekapAnggotaDialog,
-              onInputPressed: _showInputDialog,
-              onResetFilter: _resetFilter,
-              onDateRangeChanged: _onDateRangeChanged,
+            SliverToBoxAdapter(
+              child: FilterSection(
+                selectedDateRange: selectedDateRange,
+                onRekapPressed: _showRekapAnggotaDialog,
+                onInputPressed: _showInputDialog,
+                onResetFilter: _resetFilter,
+                onDateRangeChanged: _onDateRangeChanged,
+              ),
             ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: filteredData.isEmpty
-                  ? _buildEmptyState('Tidak ada data pada periode ini')
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: filteredData.length,
-                      itemBuilder: (context, index) => 
-                          _buildMobilePelanggaranCard(filteredData[index]),
+            filteredData.isEmpty
+                ? SliverFillRemaining(
+                    child: _buildEmptyState('Tidak ada data pada periode ini'),
+                  )
+                : SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildMobilePelanggaranCard(filteredData[index]),
+                        childCount: filteredData.length,
+                      ),
                     ),
-            ),
+                  ),
           ],
         );
       },
@@ -1296,16 +1338,34 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
   }
 
   Widget _buildMobilePelanggaranCard(Map<String, dynamic> item) {
-    return PelanggaranCard(
-      nama: item['nama'] ?? '-',
-      kelas: item['kelas'] ?? '-',
-      tanggal: item['tanggal'] ?? '-',
-      waktu: item['waktu'] ?? '-',
-      jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
-      poin: item['poin']?.toInt() ?? 0,
-      keterangan: item['keterangan'] ?? '-',
-      icon: Icons.warning_amber_outlined,
-      color: Colors.amber[700]!,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        elevation: 0,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {},
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: PelanggaranCard(
+              nama: item['nama'] ?? '-',
+              kelas: item['kelas'] ?? '-',
+              tanggal: item['tanggal'] ?? '-',
+              waktu: item['waktu'] ?? '-',
+              jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
+              poin: item['poin']?.toInt() ?? 0,
+              keterangan: item['keterangan'] ?? '-',
+              icon: Icons.warning_rounded,
+              color: Colors.amber[700]!,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1314,7 +1374,7 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
       future: pelanggaranFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2.5));
         }
         if (snapshot.hasError) {
           return _buildErrorState(snapshot.error.toString());
@@ -1332,40 +1392,79 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
             SliverToBoxAdapter(
               child: Container(
                 margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [_primaryColor, _secondaryColor],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
                 child: Column(
                   children: [
-                    const Icon(Icons.analytics, color: Colors.white, size: 40),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Rekap per Kelas',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [_primaryColor, _secondaryColor],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _showRekapAnggotaDialog,
-                      icon: const Icon(Icons.groups, size: 18),
-                      label: const Text('Lihat Detail Lengkap'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: _primaryColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.analytics_rounded,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Rekap per Kelas',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      'Data statistik lengkap',
+                                      style: TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _showRekapAnggotaDialog,
+                              icon: const Icon(Icons.groups_rounded, size: 18),
+                              label: const Text('Detail Lengkap'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: _primaryColor,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1409,33 +1508,34 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(_cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(_cardRadius),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [_primaryColor, _secondaryColor],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
+                  child: const Icon(
+                    Icons.school_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -1446,55 +1546,80 @@ class _RiwayatPageState extends State<RiwayatPage> with SingleTickerProviderStat
                         kelas,
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A1A),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.people_outline, size: 14, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${data['total_siswa']} siswa',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.people_outline_rounded,
+                              size: 14,
+                              color: Colors.grey[700],
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Text(
+                              '${data['total_siswa']} siswa',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${data['total_pelanggaran']}',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: severity['color'],
-                      ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: severity['bgColor'],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: (severity['color'] as Color).withOpacity(0.2),
+                      width: 1.5,
                     ),
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: severity['bgColor'],
-                        borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        '${data['total_pelanggaran']}',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: severity['color'],
+                          height: 1,
+                        ),
                       ),
-                      child: Text(
+                      const SizedBox(height: 4),
+                      Text(
                         severity['label'] as String,
                         style: TextStyle(
                           color: severity['color'],
                           fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
