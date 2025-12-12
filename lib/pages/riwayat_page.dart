@@ -928,70 +928,133 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
   // Method untuk mobile layout (yang sudah ada sebelumnya)
   Widget _buildSemuaPelanggaranPage(List<Map<String, dynamic>> data) {
-    return Column(
-      children: [
-        HeaderSummary(
-          totalPelanggaran: data.length,
-          pelanggaranBulanIni: data.length,
-          pelanggaranMingguIni: data.length,
+    if (data.isEmpty) {
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: HeaderSummary(
+              totalPelanggaran: data.length,
+              pelanggaranBulanIni: data.length, // Logic can be improved
+              pelanggaranMingguIni: data.length, // Logic can be improved
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: FilterSection(
+              selectedDateRange: selectedDateRange,
+              onRekapPressed: _showRekapAnggotaDialog,
+              onInputPressed: _showInputDialog,
+              onResetFilter: _resetFilter,
+              onDateRangeChanged: _onDateRangeChanged,
+            ),
+          ),
+          SliverFillRemaining(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tidak ada data pelanggaran',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    selectedDateRange != null
+                        ? 'pada rentang tanggal yang dipilih'
+                        : 'pada hari ini',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        ],
+      );
+    }
+
+    // Responsive grid layout for tablet/desktop
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width > 600;
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: HeaderSummary(
+            totalPelanggaran: data.length,
+            pelanggaranBulanIni: data.length, // You might want real counts here
+            pelanggaranMingguIni: data.length, // You might want real counts here
+          ),
         ),
-        FilterSection(
-          selectedDateRange: selectedDateRange,
-          onRekapPressed: _showRekapAnggotaDialog,
-          onInputPressed: _showInputDialog,
-          onResetFilter: _resetFilter,
-          onDateRangeChanged: _onDateRangeChanged,
+        SliverToBoxAdapter(
+          child: FilterSection(
+            selectedDateRange: selectedDateRange,
+            onRekapPressed: _showRekapAnggotaDialog,
+            onInputPressed: _showInputDialog,
+            onResetFilter: _resetFilter,
+            onDateRangeChanged: _onDateRangeChanged,
+          ),
         ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: data.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.inbox_outlined,
-                          size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Tidak ada data pelanggaran',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        selectedDateRange != null
-                            ? 'pada rentang tanggal yang dipilih'
-                            : 'pada hari ini',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
+        const SliverPadding(padding: EdgeInsets.only(top: 8)),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          sliver: isTablet
+              ? SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 500,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 1.6,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final item = data[index];
+                      return PelanggaranCard(
+                        nama: item['nama'] ?? '-',
+                        kelas: item['kelas'] ?? '-',
+                        tanggal: item['tanggal'] ?? '-',
+                        waktu: item['waktu'] ?? '-',
+                        jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
+                        poin: item['poin']?.toInt() ?? 0,
+                        keterangan: item['keterangan'] ?? '-',
+                        icon: Icons.warning_amber_outlined,
+                        color: Colors.amber[700]!,
+                      );
+                    },
+                    childCount: data.length,
                   ),
                 )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: data.length,
-                  itemBuilder: (context, index) {
-                    final item = data[index];
-                    return PelanggaranCard(
-                      nama: item['nama'] ?? '-',
-                      kelas: item['kelas'] ?? '-',
-                      tanggal: item['tanggal'] ?? '-',
-                      waktu: item['waktu'] ?? '-',
-                      jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
-                      poin: item['poin']?.toInt() ?? 0,
-                      keterangan: item['keterangan'] ?? '-',
-                      icon: Icons.warning_amber_outlined,
-                      color: Colors.amber[700]!,
-                    );
-                  },
+              : SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final item = data[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: PelanggaranCard(
+                          nama: item['nama'] ?? '-',
+                          kelas: item['kelas'] ?? '-',
+                          tanggal: item['tanggal'] ?? '-',
+                          waktu: item['waktu'] ?? '-',
+                          jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
+                          poin: item['poin']?.toInt() ?? 0,
+                          keterangan: item['keterangan'] ?? '-',
+                          icon: Icons.warning_amber_outlined,
+                          color: Colors.amber[700]!,
+                        ),
+                      );
+                    },
+                    childCount: data.length,
+                  ),
                 ),
         ),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
       ],
     );
   }

@@ -46,6 +46,11 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
             'keterangan': item['keterangan'] ?? '',
             'icon': Icons.money_off,
             'color': Colors.red,
+            // Tambahan data lain jika ada dari API
+            'dibuat_oleh': item['dibuat_oleh'] ?? 'Admin',
+            'kategori': item['kategori'] ?? 'Pengeluaran',
+            'metode_pembayaran': item['metode_pembayaran'] ?? 'Tunai',
+            'bukti_pembayaran': item['bukti_pembayaran'] ?? '',
           };
         }).toList();
         _isLoading = false;
@@ -95,14 +100,32 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
 
   String _formatTanggal(DateTime tanggal) {
     final bulan = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
-    return '${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
+    final hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    return '${hari[tanggal.weekday - 1]}, ${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
+  }
+
+  String _formatWaktu(DateTime tanggal) {
+    final jam = tanggal.hour.toString().padLeft(2, '0');
+    final menit = tanggal.minute.toString().padLeft(2, '0');
+    return '$jam:$menit WIB';
   }
 
   bool get _canAddTransaction {
     return _jabatan != 'Anggota' && _jabatan != 'Guru';
+  }
+
+  void _showDetailPengeluaran(Map<String, dynamic> item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DetailPengeluaranModal(item: item);
+      },
+    );
   }
 
   @override
@@ -118,7 +141,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
             )
           : CustomScrollView(
               slivers: [
-                // Modern App Bar dengan gradient
                 SliverAppBar(
                   expandedHeight: 200,
                   floating: false,
@@ -140,7 +162,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                       ),
                       child: Stack(
                         children: [
-                          // Decorative circles
                           Positioned(
                             right: -50,
                             top: -50,
@@ -193,7 +214,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                   ],
                 ),
 
-                // Total Card dengan desain modern
                 SliverToBoxAdapter(
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -298,7 +318,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                   ),
                 ),
 
-                // Section Header
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
@@ -330,7 +349,6 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                   ),
                 ),
 
-                // List Transaksi
                 _riwayatPengeluaran.isEmpty
                     ? SliverFillRemaining(
                         child: Center(
@@ -394,7 +412,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                                   color: Colors.transparent,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(20),
-                                    onTap: () {},
+                                    onTap: () => _showDetailPengeluaran(item),
                                     child: Padding(
                                       padding: const EdgeInsets.all(18),
                                       child: Row(
@@ -535,5 +553,446 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
             )
           : null,
     );
+  }
+}
+
+class DetailPengeluaranModal extends StatelessWidget {
+  final Map<String, dynamic> item;
+
+  const DetailPengeluaranModal({
+    super.key,
+    required this.item,
+  });
+
+  String _formatTanggal(DateTime tanggal) {
+    final bulan = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    final hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    return '${hari[tanggal.weekday - 1]}, ${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
+  }
+
+  String _formatWaktu(DateTime tanggal) {
+    final jam = tanggal.hour.toString().padLeft(2, '0');
+    final menit = tanggal.minute.toString().padLeft(2, '0');
+    return '$jam:$menit WIB';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 30,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag indicator
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Header dengan judul dan ikon
+                  Row(
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              item['color'].withOpacity(0.2),
+                              item['color'].withOpacity(0.1),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          item['icon'],
+                          color: item['color'],
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['judul'],
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'ID: ${item['id']}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Jumlah Pengeluaran
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Jumlah Pengeluaran',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '- Rp ${item['jumlah'].toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          style: TextStyle(
+                            color: Colors.red[700],
+                            fontSize: 36,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Detail Informasi
+                  const Text(
+                    'Detail Informasi',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildDetailItem(
+                    icon: Icons.description_rounded,
+                    title: 'Keterangan',
+                    value: item['keterangan'],
+                    color: Colors.blue,
+                  ),
+                  _buildDetailItem(
+                    icon: Icons.category_rounded,
+                    title: 'Kategori',
+                    value: item['kategori'],
+                    color: Colors.green,
+                  ),
+                  _buildDetailItem(
+                    icon: Icons.payment_rounded,
+                    title: 'Metode Pembayaran',
+                    value: item['metode_pembayaran'],
+                    color: Colors.purple,
+                  ),
+                  _buildDetailItem(
+                    icon: Icons.person_rounded,
+                    title: 'Dibuat Oleh',
+                    value: item['dibuat_oleh'],
+                    color: Colors.orange,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Waktu Transaksi
+                  const Text(
+                    'Waktu Transaksi',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.calendar_month_rounded,
+                            color: Colors.grey[700],
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _formatTanggal(item['tanggal']),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _formatWaktu(item['tanggal']),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Bukti Pembayaran (jika ada)
+                  if (item['bukti_pembayaran'] != null && item['bukti_pembayaran'].isNotEmpty)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 30),
+                        const Text(
+                          'Bukti Pembayaran',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () {
+                            // TODO: Implement full screen view for proof
+                          },
+                          child: Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(16),
+                              image: DecorationImage(
+                                image: NetworkImage(item['bukti_pembayaran']),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                Positioned(
+                                  bottom: 12,
+                                  right: 12,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.7),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(
+                                          Icons.zoom_in_rounded,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Perbesar',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                  const SizedBox(height: 30),
+
+                  // Tombol Aksi
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            side: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          child: const Text(
+                            'Tutup',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (_isAdmin()) // Anda bisa menyesuaikan kondisi ini
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // TODO: Implement edit functionality
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red[600],
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                            ),
+                            child: const Text(
+                              'Edit',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailItem({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _isAdmin() {
+    // Logika untuk menentukan apakah user adalah admin
+    return true; // Ganti dengan logika sesuai kebutuhan
   }
 }

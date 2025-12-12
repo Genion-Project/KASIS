@@ -1294,143 +1294,195 @@ class DetailKelasPage extends StatelessWidget {
       }
       groupedByStudent[nama]!.add(item);
     }
+    
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          'Detail Kelas $namaKelas',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+      body: CustomScrollView(
+        slivers: [
+          // App Bar
+          SliverAppBar(
+            expandedHeight: 0, // Standard AppBar height
+            pinned: true,
+            title: Text(
+              'Detail Kelas $namaKelas',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            centerTitle: true,
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.picture_as_pdf_rounded),
+                tooltip: 'Export ke PDF',
+                onPressed: () => _generatePDF(context),
+              ),
+              const SizedBox(width: 8),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.grey.withOpacity(0.1),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded),
-            tooltip: 'Export ke PDF',
-            onPressed: () => _generatePDF(context),
-          ),
-          const SizedBox(width: 8),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  Colors.grey.withOpacity(0.1),
-                  Colors.transparent,
+
+          // Header Summary (Scrollable)
+          SliverToBoxAdapter(
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB), Color(0xFF1E40AF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(24),
+              margin: const EdgeInsets.only(bottom: 20),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      Expanded(
+                        child: _buildMobileStatCard(
+                          'Total Siswa',
+                          groupedByStudent.length.toString(),
+                          Icons.people_alt_rounded,
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 50,
+                        color: Colors.white.withOpacity(0.3),
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      Expanded(
+                        child: _buildMobileStatCard(
+                          'Total Pelanggaran',
+                          dataSiswa.length.toString(),
+                          Icons.warning_amber_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _generatePDF(context),
+                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                    label: const Text(
+                      'Export ke PDF',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF3B82F6),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-      body: Column(
-        children: [
-          // Header Summary
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF3B82F6), Color(0xFF2563EB), Color(0xFF1E40AF)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF3B82F6).withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildMobileStatCard(
-                      'Total Siswa',
-                      groupedByStudent.length.toString(),
-                      Icons.people_alt_rounded,
+
+          // Content
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            sliver: isTablet
+                ? SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 400,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 1.4,
                     ),
-                    Container(
-                      width: 1,
-                      height: 50,
-                      color: Colors.white.withOpacity(0.3),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final nama = groupedByStudent.keys.elementAt(index);
+                        final pelanggaranSiswa = groupedByStudent[nama]!;
+                        final totalPoin = pelanggaranSiswa.fold<int>(
+                          0,
+                          (sum, item) {
+                            final poin = item['poin'];
+                            final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
+                            return (sum + poinInt).toInt();
+                          },
+                        );
+
+                        return _buildDesktopStudentCard(
+                          context,
+                          nama: nama,
+                          totalPelanggaran: pelanggaranSiswa.length,
+                          totalPoin: totalPoin,
+                          pelanggaranList: pelanggaranSiswa,
+                        );
+                      },
+                      childCount: groupedByStudent.length,
                     ),
-                    _buildMobileStatCard(
-                      'Total Pelanggaran',
-                      dataSiswa.length.toString(),
-                      Icons.warning_amber_rounded,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => _generatePDF(context),
-                  icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
-                  label: const Text(
-                    'Export ke PDF',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                  )
+                : SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final nama = groupedByStudent.keys.elementAt(index);
+                        final pelanggaranSiswa = groupedByStudent[nama]!;
+                        final totalPoin = pelanggaranSiswa.fold<int>(
+                          0,
+                          (sum, item) {
+                            final poin = item['poin'];
+                            final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
+                            return (sum + poinInt).toInt();
+                          },
+                        );
+
+                        return _buildMobileStudentCard(
+                          context,
+                          nama: nama,
+                          totalPelanggaran: pelanggaranSiswa.length,
+                          totalPoin: totalPoin,
+                          pelanggaranList: pelanggaranSiswa,
+                        );
+                      },
+                      childCount: groupedByStudent.length,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF3B82F6),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 3,
-                  ),
-                ),
-              ],
-            ),
           ),
-
-          // List of Students
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: groupedByStudent.length,
-              itemBuilder: (context, index) {
-                final nama = groupedByStudent.keys.elementAt(index);
-                final pelanggaranSiswa = groupedByStudent[nama]!;
-                final totalPoin = pelanggaranSiswa.fold<int>(
-                  0,
-                  (sum, item) {
-                    final poin = item['poin'];
-                    final poinInt = (poin is int) ? poin : (poin is double ? poin.toInt() : 0);
-                    return (sum + poinInt).toInt();
-                  },
-                );
-
-                return _buildMobileStudentCard(
-                  context,
-                  nama: nama,
-                  totalPelanggaran: pelanggaranSiswa.length,
-                  totalPoin: totalPoin,
-                  pelanggaranList: pelanggaranSiswa,
-                );
-              },
-            ),
-          ),
+          
+          // Bottom Padding
+          const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
         ],
       ),
     );

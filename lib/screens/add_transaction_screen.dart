@@ -56,7 +56,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     String year = date.year.toString();
     String month = date.month.toString().padLeft(2, '0');
     String day = date.day.toString().padLeft(2, '0');
-    return '$year-$month-$day';
+    String hour = date.hour.toString().padLeft(2, '0');
+    String minute = date.minute.toString().padLeft(2, '0');
+    String second = date.second.toString().padLeft(2, '0');
+    return '$year-$month-$day $hour:$minute:$second';
   }
 
   Future<void> _saveTransaction() async {
@@ -81,17 +84,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
 
     try {
+      // Combine selectedDate with current time
+      final now = DateTime.now();
+      final DateTime transactionDateTime = DateTime(
+        selectedDate.year,
+        selectedDate.month,
+        selectedDate.day,
+        now.hour,
+        now.minute,
+        now.second,
+      );
+
       bool success = false;
       
       if (selectedType == 'Pemasukan') {
         success = await ApiService.addPemasukan(
-          tanggal: _formatDateForApi(selectedDate),
+          tanggal: _formatDateForApi(transactionDateTime),
           jumlah: jumlah,
           keterangan: descriptionController.text,
         );
       } else {
         success = await ApiService.addPengeluaran(
-          tanggal: _formatDateForApi(selectedDate),
+          tanggal: _formatDateForApi(transactionDateTime),
           jumlah: jumlah,
           keterangan: descriptionController.text,
         );

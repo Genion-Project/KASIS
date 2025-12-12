@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
-import 'add_transaction_screen.dart';
+import '../pages/riwayat_page.dart';  // Import RiwayatPage
 import 'members_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -15,13 +15,13 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
 
   final List<Widget> _screens = [
     HomeScreen(),
-    AddTransactionScreen(),
+    RiwayatPage(), // Use RiwayatPage instead of AddTransactionScreen
     MembersScreen(),
   ];
 
   final List<_NavItem> _navItems = [
     _NavItem(icon: Icons.home_rounded, label: 'Home', activeIcon: Icons.home),
-    _NavItem(icon: Icons.add_circle_outline, label: 'Transaksi', activeIcon: Icons.add_circle),
+    _NavItem(icon: Icons.assignment_late_outlined, label: 'Pelanggaran', activeIcon: Icons.assignment_late_rounded), // Updated icon and label
     _NavItem(icon: Icons.people_outline_rounded, label: 'Anggota', activeIcon: Icons.people_rounded),
   ];
 
@@ -34,124 +34,73 @@ class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      floatingActionButton: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [Color(0xFF1976D2), Color(0xFF1565C0)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      backgroundColor: Colors.grey[50], // Background universal
+      body: Stack(
+        children: [
+          // Content Layer
+          IndexedStack(
+            index: _currentIndex,
+            children: _screens,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0xFF1976D2).withOpacity(0.4),
-              blurRadius: 20,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Icon(
-            Icons.groups_rounded,
-            size: 32,
-            color: Colors.white,
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _buildModernBottomBar(),
-    );
-  }
-
-  Widget _buildModernBottomBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
-            offset: Offset(0, -3),
+          
+          // Floating Navbar Layer
+          Positioned(
+            left: 50,
+            right: 50,
+            bottom: 24,
+            child: _buildFloatingNavbar(),
           ),
         ],
       ),
-      child: BottomAppBar(
-        shape: CircularNotchedRectangle(),
-        notchMargin: 8,
-        elevation: 0,
-        color: Colors.white,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(_navItems[0], 0),
-              SizedBox(width: 80),
-              _buildNavItem(_navItems[2], 2),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
-  Widget _buildNavItem(_NavItem item, int index) {
-    final isSelected = _currentIndex == index;
-    
-    return GestureDetector(
-      onTap: () => _onNavTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Color(0xFF1976D2).withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icon with scale animation
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 1.0, end: isSelected ? 1.15 : 1.0),
-              duration: Duration(milliseconds: 300),
-              curve: Curves.easeOutBack,
-              builder: (context, scale, child) {
-                return Transform.scale(
-                  scale: scale,
+  Widget _buildFloatingNavbar() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: _navItems.asMap().entries.map((entry) {
+          final index = entry.key;
+          final item = entry.value;
+          final isSelected = _currentIndex == index;
+
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => _onNavTap(index),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected 
+                      ? Color(0xFF6C63FF).withOpacity(0.1) 
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: Center(
                   child: Icon(
                     isSelected ? item.activeIcon : item.icon,
-                    color: isSelected ? Color(0xFF1976D2) : Colors.grey[600],
-                    size: 26,
+                    color: isSelected ? Color(0xFF6C63FF) : Colors.grey[400],
+                    size: 24,
                   ),
-                );
-              },
-            ),
-            SizedBox(height: 4),
-            // Label with fade animation
-            AnimatedDefaultTextStyle(
-              duration: Duration(milliseconds: 300),
-              style: TextStyle(
-                color: isSelected ? Color(0xFF1976D2) : Colors.grey[600],
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                letterSpacing: 0.3,
+                ),
               ),
-              child: Text(item.label),
             ),
-          ],
-        ),
+          );
+        }).toList(),
       ),
     );
   }
