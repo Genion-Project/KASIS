@@ -324,7 +324,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFF6B35), Color(0xFFF7931E)],
+                      colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)], // Slate 900 to Blue 600
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -334,10 +334,10 @@ class _RiwayatPageState extends State<RiwayatPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.assessment_rounded, 
+                        child: const Icon(Icons.assessment_outlined, 
                                  color: Colors.white, size: 32),
                       ),
                       const SizedBox(height: 16),
@@ -849,36 +849,75 @@ class _RiwayatPageState extends State<RiwayatPage> {
   Widget _buildMobileLayout() {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          'Rekap Pelanggaran',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  Colors.grey.withOpacity(0.1),
-                  Colors.transparent,
-                ],
-              ),
-            ),
-          ),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showInputDialog,
+        backgroundColor: const Color(0xFF2563EB),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Input Pelanggaran'),
+        elevation: 4,
+        highlightElevation: 8,
       ),
       body: Column(
         children: [
+          // Custom Header for Mobile
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x332563EB),
+                  blurRadius: 24,
+                  offset: Offset(0, 8),
+                ),
+              ],
+            ),
+            child: SafeArea( // Added SafeArea
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24), // Adjusted padding
+                child: Column(
+                  children: [
+                    Stack( // Changed to Stack for proper centering and back button placement
+                      alignment: Alignment.center,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector( // Improved touch target
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                color: Colors.transparent, // Hit test for transparent area
+                                child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                              ),
+                            ),
+                            const SizedBox(width: 40), // Spacer equivalent
+                          ],
+                        ),
+                        const Text(
+                          'Rekap Pelanggaran',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           FilterTabs(
             activeFilter: activeFilter,
             onFilterChanged: _onFilterChanged,
@@ -1087,21 +1126,22 @@ class _RiwayatPageState extends State<RiwayatPage> {
           pinned: true,
           elevation: 0,
           automaticallyImplyLeading: false,
-          backgroundColor: const Color(0xFFF59E0B),
+          backgroundColor: const Color(0xFF1E3A8A),
           flexibleSpace: FlexibleSpaceBar(
             centerTitle: true,
             titlePadding: EdgeInsets.zero,
             title: null,
             background: Container(
+
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFF59E0B), Color(0xFFD97706), Color(0xFFB45309)],
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)], // Slate & Blue
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xFFF59E0B),
+                    color: Color(0xFF2563EB),
                     blurRadius: 20,
                     offset: Offset(0, 10),
                   ),

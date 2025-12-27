@@ -23,15 +23,15 @@ class HeaderSummary extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Color(0xFFFF6B35),
-            Color(0xFFF7931E),
+            Color(0xFF1E3A8A), // Slate 900
+            Color(0xFF2563EB), // Blue 600
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFFFF6B35).withOpacity(0.4),
+            color: Color(0xFF2563EB).withOpacity(0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
             spreadRadius: -5,

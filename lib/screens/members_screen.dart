@@ -484,61 +484,12 @@ class _MembersScreenState extends State<MembersScreen> {
     final isTablet = _isTablet(context);
 
     return Scaffold(
-      backgroundColor: isDesktop ? Colors.grey[100] : Colors.blue[600],
-      appBar: isDesktop ? null : _buildMobileAppBar(),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(isTablet),
     );
   }
 
-  // Mobile AppBar
-  PreferredSizeWidget _buildMobileAppBar() {
-    return AppBar(
-      title: const Text(
-        'Daftar Anggota',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      backgroundColor: Colors.blue[600],
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      actions: [
-        // Tombol Export PDF
-        Container(
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
-            tooltip: 'Export Rekap Kas',
-            onPressed: _generateRekapKasPDF,
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.person_add_rounded, color: Colors.white),
-            tooltip: 'Tambah Anggota',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => AddMemberPage()),
-              ).then((result) {
-                if (result == true && mounted) _reloadMembers();
-              });
-            },
-          ),
-        ),
-      ],
-    );
-  }
+
 
   // Desktop Layout
   Widget _buildDesktopLayout() {
@@ -549,7 +500,7 @@ class _MembersScreenState extends State<MembersScreen> {
           width: 320,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.blue[700]!, Colors.blue[500]!],
+              colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)], // Slate & Blue
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -1207,60 +1158,156 @@ class _MembersScreenState extends State<MembersScreen> {
   Widget _buildMobileLayout(bool isTablet) {
     return Column(
       children: [
-        // Header statistik
-        StatHeaderWidget(),
-
-        // Search Bar
+        // Custom Header
         Container(
-          color: Colors.blue[600],
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: TextField(
-            controller: _searchController,
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Cari anggota...',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.white),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, color: Colors.white),
-                      onPressed: () {
-                        _searchController.clear();
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(32),
+              bottomRight: Radius.circular(32),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x332563EB),
+                blurRadius: 24,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Daftar Anggota',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Kelola data & kas',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                       // Actions Row
+                      Row(
+                        children: [
+                          // Export Button
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
+                              tooltip: 'Export PDF',
+                              onPressed: _generateRekapKasPDF,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Add Member Button
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(Icons.person_add_rounded, color: Colors.white),
+                              tooltip: 'Tambah Anggota',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => AddMemberPage()),
+                                ).then((result) {
+                                  if (result == true && mounted) _reloadMembers();
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Search Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
                         setState(() {
-                          _searchQuery = '';
+                          _searchQuery = value;
                         });
                       },
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.2),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16, 
-                vertical: 14
+                      style: const TextStyle(color: Colors.black87),
+                      decoration: InputDecoration(
+                        hintText: 'Cari nama anggota...',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        prefixIcon: Icon(Icons.search_rounded, color: Colors.blue[700]),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.clear_rounded, color: Colors.grey[400]),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
+        
+        // Stat Header (Optional placement)
+        // Transform.translate(
+        //   offset: const Offset(0, -20),
+        //   child: Padding(
+        //     padding: const EdgeInsets.symmetric(horizontal: 24),
+        //     child: StatHeaderWidget(),
+        //   ),
+        // ),
 
         // List member dengan FutureBuilder
         Expanded(
           child: Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(28),
-                topRight: Radius.circular(28),
-              ),
-            ),
+            color: const Color(0xFFF8FAFC), // Match background
             child: FutureBuilder<List<Map<String, dynamic>>>(
               future: _membersFuture,
               builder: (context, snapshot) {
@@ -1463,17 +1510,15 @@ class _MembersScreenState extends State<MembersScreen> {
                         padding: EdgeInsets.all(isTablet ? 20 : 16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: totalPaid > 0 
-                              ? Colors.green[100]! 
-                              : Colors.grey[200]!,
-                            width: 1.5,
+                            color: const Color(0xFFE2E8F0),
+                            width: 1,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey.withOpacity(0.08),
-                              blurRadius: 12,
+                              color: const Color(0xFF64748B).withOpacity(0.08),
+                              blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
                           ],
@@ -1486,17 +1531,17 @@ class _MembersScreenState extends State<MembersScreen> {
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: totalPaid > 0
-                                    ? [Colors.green[400]!, Colors.green[600]!]
-                                    : [Colors.grey[300]!, Colors.grey[500]!],
+                                    ? [const Color(0xFF10B981), const Color(0xFF059669)]
+                                    : [const Color(0xFF94A3B8), const Color(0xFF64748B)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
                                     color: (totalPaid > 0 
-                                      ? Colors.green 
-                                      : Colors.grey).withOpacity(0.3),
+                                      ? const Color(0xFF10B981) 
+                                      : const Color(0xFF94A3B8)).withOpacity(0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -1515,7 +1560,7 @@ class _MembersScreenState extends State<MembersScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1523,9 +1568,10 @@ class _MembersScreenState extends State<MembersScreen> {
                                   Text(
                                     member['name'] ?? 'Tidak Diketahui',
                                     style: TextStyle(
-                                      fontSize: isTablet ? 16 : 15,
+                                      fontSize: isTablet ? 16 : 16,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.grey[900],
+                                      color: const Color(0xFF1E293B),
+                                      letterSpacing: 0.2,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -1535,35 +1581,33 @@ class _MembersScreenState extends State<MembersScreen> {
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
+                                          horizontal: 10,
+                                          vertical: 5,
                                         ),
                                         decoration: BoxDecoration(
                                           color: totalPaid > 0 
-                                            ? Colors.green[50] 
-                                            : Colors.red[50],
-                                          borderRadius: BorderRadius.circular(6),
+                                            ? const Color(0xFFD1FAE5) 
+                                            : const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
                                           status,
                                           style: TextStyle(
-                                            fontSize: 11,
+                                            fontSize: 12,
                                             fontWeight: FontWeight.w600,
                                             color: totalPaid > 0 
-                                              ? Colors.green[700] 
-                                              : Colors.red[700],
+                                              ? const Color(0xFF059669)
+                                              : const Color(0xFF64748B),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: 12),
                                       Text(
                                         'Rp ${NumberFormat('#,###', 'id_ID').format(totalPaid)}',
                                         style: TextStyle(
-                                          fontSize: isTablet ? 14 : 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: totalPaid > 0 
-                                            ? Colors.green[600] 
-                                            : Colors.grey[500],
+                                          fontSize: isTablet ? 14 : 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF334155),
                                         ),
                                       ),
                                     ],
