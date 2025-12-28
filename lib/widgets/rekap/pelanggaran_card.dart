@@ -30,24 +30,53 @@ class PelanggaranCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Parsing Tanggal & Waktu logic
+    String displayTanggal = tanggal;
+    String displayWaktu = waktu;
+
+    try {
+      // Jika tanggal mengandung waktu (format YYYY-MM-DD HH:mm:ss)
+      if (tanggal.contains(' ')) {
+        final parts = tanggal.split(' ');
+        if (parts.length >= 2) {
+          displayTanggal = parts[0]; // Ambil bagian tanggal saja
+          
+          // Jika waktu kosong atau '-', ambil dari timestamp
+          if (waktu == '-' || waktu.isEmpty) {
+            // Coba parsing agar format lebih rapi (misal ambil HH:mm saja)
+            final timePart = parts[1];
+            final timeParts = timePart.split(':');
+            if (timeParts.length >= 2) {
+              displayWaktu = '${timeParts[0]}:${timeParts[1]}'; // HH:mm
+            } else {
+              displayWaktu = timePart;
+            }
+          }
+        }
+      }
+    } catch (_) {
+      // Fallback jika parsing gagal
+      displayTanggal = tanggal;
+      displayWaktu = waktu;
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey[200]!, width: 2), // ✅ aman
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [
-              Colors.white,
-              Colors.grey[100]!, // ✅ aman
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF64748B).withOpacity(0.08),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(18),
@@ -58,26 +87,12 @@ class PelanggaranCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      color.withOpacity(0.15),
-                      color.withOpacity(0.08),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+                  color: color.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: color.withOpacity(0.2),
-                    width: 1.5,
+                    color: color.withOpacity(0.1),
+                    width: 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.15),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 child: Icon(
                   icon,
@@ -103,41 +118,31 @@ class PelanggaranCard extends StatelessWidget {
                               Text(
                                 nama,
                                 style: const TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF1A1A1A),
-                                  letterSpacing: -0.3,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E293B),
+                                  letterSpacing: -0.5,
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 5,
+                                  horizontal: 10,
+                                  vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.blue[600]!,
-                                      Colors.blue[700]!,
-                                    ],
-                                  ),
+                                  color: const Color(0xFFEFF6FF), // Blue 50
                                   borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.blue.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
+                                  border: Border.all(
+                                    color: const Color(0xFFBFDBFE), // Blue 200
+                                  ),
                                 ),
                                 child: Text(
                                   kelas,
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: Color(0xFF2563EB), // Blue 600
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.3,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
@@ -153,33 +158,25 @@ class PelanggaranCard extends StatelessWidget {
                                 horizontal: 14,
                                 vertical: 8,
                               ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    color,
-                                    color.withOpacity(0.8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDC2626), // Red 600
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFDC2626).withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
                                   ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
                                 ),
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: color.withOpacity(0.4),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
+                                child: Text(
+                                  '-$poin Poin',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                ],
-                              ),
-                              child: Text(
-                                '-$poin Poin',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.3,
                                 ),
-                              ),
                             ),
                             // ✅ TOMBOL HAPUS (hanya muncul jika onDelete tidak null)
                             if (onDelete != null) ...[
@@ -213,33 +210,29 @@ class PelanggaranCard extends StatelessWidget {
 
                     // Jenis Pelanggaran dengan background
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red[50], // ✅ aman
-                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFFFEF2F2), // Red 50
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.red[100]!, // ✅ aman
-                          width: 1,
+                          color: const Color(0xFFFEE2E2), // Red 100
                         ),
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.warning_amber_rounded,
                             size: 18,
-                            color: Colors.red[700],
+                            color: Color(0xFFDC2626), // Red 600
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               jenisPelanggaran,
-                              style: TextStyle(
-                                color: Colors.red[900],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                              style: const TextStyle(
+                                color: Color(0xFFB91C1C), // Red 700
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -248,71 +241,45 @@ class PelanggaranCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
 
-                    // Date & Time dengan modern chips
+                    // Date & Time
                     Row(
                       children: [
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100], // ✅ aman
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.calendar_today_rounded,
-                                  size: 14,
-                                  color: Colors.grey[700],
-                                ),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    tanggal,
-                                    style: TextStyle(
-                                      color: Colors.grey[800],
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 16,
+                          color: Color(0xFF94A3B8), // Slate 400
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          displayTanggal, // Gunakan variabel yang sudah diparsing
+                          style: const TextStyle(
+                            color: Color(0xFF64748B), // Slate 500
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 16),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
+                          width: 4,
+                          height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.grey[100], // ✅ aman
-                            borderRadius: BorderRadius.circular(8),
+                            color: Color(0xFFCBD5E1), // Slate 300
+                            shape: BoxShape.circle,
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.access_time_rounded,
-                                size: 14,
-                                color: Colors.grey[700],
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                waktu,
-                                style: TextStyle(
-                                  color: Colors.grey[800],
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                        ),
+                        const SizedBox(width: 16),
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 16,
+                          color: Color(0xFF94A3B8),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          displayWaktu, // Gunakan variabel yang sudah diparsing
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -322,34 +289,24 @@ class PelanggaranCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.blue[50]!,  // ✅ aman
-                              Colors.blue[100]!, // ✅ aman
-                            ],
-                          ),
+                          color: const Color(0xFFF1F5F9), // Slate 100
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.blue[200]!, // ✅ aman
-                            width: 1,
-                          ),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.info_rounded,
-                              size: 18,
-                              color: Colors.blue[700],
+                            const Icon(
+                              Icons.description_outlined,
+                              size: 16,
+                              color: Color(0xFF64748B),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 keterangan,
-                                style: TextStyle(
-                                  color: Colors.blue[900],
+                                style: const TextStyle(
+                                  color: Color(0xFF475569), // Slate 600
                                   fontSize: 13,
-                                  fontWeight: FontWeight.w600,
                                   height: 1.4,
                                 ),
                               ),
@@ -364,6 +321,31 @@ class PelanggaranCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9), // Slate 100
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF64748B)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF475569),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

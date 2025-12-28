@@ -568,6 +568,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
         }
 
         final filteredData = _filterByDateRange(snapshot.data!);
+        filteredData.sort((a, b) => (b['id'] ?? 0).compareTo(a['id'] ?? 0));
         
         return Padding(
           padding: const EdgeInsets.all(24),
@@ -939,6 +940,8 @@ class _RiwayatPageState extends State<RiwayatPage> {
                     }
 
                     final filteredData = _filterByDateRange(snapshot.data!);
+                    // Sort descending by ID so new items appear top
+                    filteredData.sort((a, b) => (b['id'] ?? 0).compareTo(a['id'] ?? 0));
                     return _buildSemuaPelanggaranPage(filteredData);
                   },
                 ),

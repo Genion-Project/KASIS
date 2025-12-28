@@ -527,27 +527,27 @@ class DetailKelasPage extends StatelessWidget {
     required Map<String, int> severityCount,
   }) {
     return Container(
-      width: 320,
+      width: 340,
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(2, 0),
+            color: const Color(0xFF64748B).withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(4, 0),
           ),
         ],
       ),
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // Header
+            // Premium Header with Gradient
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB), Color(0xFF1E40AF)],
+                  colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -555,83 +555,97 @@ class DetailKelasPage extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 2,
+                      ),
                     ),
                     child: const Icon(
                       Icons.school_rounded,
                       color: Colors.white,
-                      size: 32,
+                      size: 36,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   Text(
                     namaKelas,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    '${groupedByStudent.length} Siswa',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 14,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${groupedByStudent.length} Siswa Terdaftar',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.95),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Class Summary
+            // Class Summary Stats
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Ringkasan Kelas',
+                    'Ringkasan Statistik',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E293B),
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
                   
-                  // Total Points
+                  // Total Points Card
                   _buildSidebarStatItem(
                     icon: Icons.assessment_rounded,
-                    iconColor: const Color(0xFF3B82F6),
+                    iconColor: const Color(0xFF2563EB),
                     label: 'Total Poin Kelas',
                     value: '$totalPoinKelas',
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   
-                  // Average Points
+                  // Average Points Card
                   _buildSidebarStatItem(
                     icon: Icons.timeline_rounded,
                     iconColor: const Color(0xFF10B981),
                     label: 'Rata-rata Poin/Siswa',
                     value: groupedByStudent.isEmpty ? '0' : '${(totalPoinKelas / groupedByStudent.length).toStringAsFixed(1)}',
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
                   // Severity Distribution
                   const Text(
                     'Distribusi Tingkat Pelanggaran',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF64748B),
+                      letterSpacing: 0.3,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   
                   _buildSeverityBar(
                     label: 'Kritis',
@@ -639,7 +653,7 @@ class DetailKelasPage extends StatelessWidget {
                     total: groupedByStudent.length,
                     color: const Color(0xFFDC2626),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   
                   _buildSeverityBar(
                     label: 'Tinggi',
@@ -647,7 +661,7 @@ class DetailKelasPage extends StatelessWidget {
                     total: groupedByStudent.length,
                     color: const Color(0xFFF59E0B),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   
                   _buildSeverityBar(
                     label: 'Sedang',
@@ -655,7 +669,7 @@ class DetailKelasPage extends StatelessWidget {
                     total: groupedByStudent.length,
                     color: const Color(0xFFEAB308),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   
                   _buildSeverityBar(
                     label: 'Rendah',
@@ -667,38 +681,57 @@ class DetailKelasPage extends StatelessWidget {
               ),
             ),
 
-            // Actions
+            // Action Buttons
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
               child: Column(
                 children: [
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () => _generatePDF(context),
-                      icon: const Icon(Icons.picture_as_pdf_rounded),
-                      label: const Text('Export Laporan PDF'),
+                      icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                      label: const Text(
+                        'Export Laporan PDF',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B82F6),
+                        backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
+                        shadowColor: const Color(0xFF2563EB).withOpacity(0.3),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                      label: const Text('Kembali ke Rekap'),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                      label: const Text(
+                        'Kembali ke Rekap',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        foregroundColor: const Color(0xFF64748B),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(
+                          color: Color(0xFFE2E8F0),
+                          width: 1.5,
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                     ),
@@ -706,7 +739,6 @@ class DetailKelasPage extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -720,23 +752,26 @@ class DetailKelasPage extends StatelessWidget {
     required String value,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        color: const Color(0xFFF8FAFC), // Slate 50
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFE2E8F0), // Slate 200
+          width: 1.5,
+        ),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: iconColor, size: 22),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -744,16 +779,19 @@ class DetailKelasPage extends StatelessWidget {
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1E293B), // Slate 800
+                    letterSpacing: -0.5,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: Color(0xFF64748B), // Slate 500
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -1299,129 +1337,115 @@ class DetailKelasPage extends StatelessWidget {
     final isTablet = screenWidth > 600;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8FAFC), // Slate 50
       body: CustomScrollView(
         slivers: [
-          // App Bar
+          // Modern Premium AppBar
           SliverAppBar(
-            expandedHeight: 0, // Standard AppBar height
+            expandedHeight: 220,
+            floating: false,
             pinned: true,
-            title: Text(
-              'Detail Kelas $namaKelas',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
+            elevation: 0,
+            backgroundColor: const Color(0xFF1E3A8A), // Blue 900
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(32),
+                bottomRight: Radius.circular(32),
               ),
             ),
-            centerTitle: true,
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
-            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)], // Blue 900 -> Blue 600
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 20),
+                        // Stats Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildMobileStatItem(
+                              'Total Siswa',
+                              groupedByStudent.length.toString(),
+                              Icons.people_alt_rounded,
+                            ),
+                            Container(
+                              height: 40,
+                              width: 1,
+                              color: Colors.white.withOpacity(0.2),
+                            ),
+                            _buildMobileStatItem(
+                              'Total Pelanggaran',
+                              dataSiswa.length.toString(),
+                              Icons.warning_amber_rounded,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        // Export Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _generatePDF(context),
+                            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                            label: const Text('Export Laporan PDF'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white.withOpacity(0.15),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Kelas $namaKelas',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+              ),
+              centerTitle: true,
+              titlePadding: const EdgeInsets.only(bottom: 16),
+            ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              icon: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+              ),
               onPressed: () => Navigator.pop(context),
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.picture_as_pdf_rounded),
-                tooltip: 'Export ke PDF',
-                onPressed: () => _generatePDF(context),
-              ),
-              const SizedBox(width: 8),
-            ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(1),
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Colors.grey.withOpacity(0.1),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
           ),
 
-          // Header Summary (Scrollable)
-          SliverToBoxAdapter(
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB), Color(0xFF1E40AF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF3B82F6).withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(24),
-              margin: const EdgeInsets.only(bottom: 20),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Expanded(
-                        child: _buildMobileStatCard(
-                          'Total Siswa',
-                          groupedByStudent.length.toString(),
-                          Icons.people_alt_rounded,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 50,
-                        color: Colors.white.withOpacity(0.3),
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      Expanded(
-                        child: _buildMobileStatCard(
-                          'Total Pelanggaran',
-                          dataSiswa.length.toString(),
-                          Icons.warning_amber_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () => _generatePDF(context),
-                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
-                    label: const Text(
-                      'Export ke PDF',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF3B82F6),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Content
+          // List Content
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(20),
             sliver: isTablet
                 ? SliverGrid(
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -1442,7 +1466,6 @@ class DetailKelasPage extends StatelessWidget {
                             return (sum + poinInt).toInt();
                           },
                         );
-
                         return _buildDesktopStudentCard(
                           context,
                           nama: nama,
@@ -1481,41 +1504,35 @@ class DetailKelasPage extends StatelessWidget {
                   ),
           ),
           
-          // Bottom Padding
-          const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
         ],
       ),
     );
   }
 
-  Widget _buildMobileStatCard(String label, String value, IconData icon) {
+  Widget _buildMobileStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.3),
-              width: 2,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white70, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          child: Icon(icon, color: Colors.white, size: 28),
+          ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withOpacity(0.8),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -1533,169 +1550,109 @@ class DetailKelasPage extends StatelessWidget {
   }) {
     Color poinColor;
     Color poinBgColor;
-    String severity;
-
+    
     if (totalPoin >= 50) {
-      poinColor = const Color(0xFFDC2626);
-      poinBgColor = const Color(0xFFFEE2E2);
-      severity = 'Kritis';
+      poinColor = const Color(0xFFDC2626); // Red 600
+      poinBgColor = const Color(0xFFFEE2E2); // Red 100
     } else if (totalPoin >= 30) {
-      poinColor = const Color(0xFFF59E0B);
-      poinBgColor = const Color(0xFFFEF3C7);
-      severity = 'Tinggi';
+      poinColor = const Color(0xFFF59E0B); // Amber 500
+      poinBgColor = const Color(0xFFFEF3C7); // Amber 100
     } else if (totalPoin >= 15) {
-      poinColor = const Color(0xFFEAB308);
-      poinBgColor = const Color(0xFFFEF9C3);
-      severity = 'Sedang';
+      poinColor = const Color(0xFFEAB308); // Yellow 500
+      poinBgColor = const Color(0xFFFEF9C3); // Yellow 100
     } else {
-      poinColor = const Color(0xFF10B981);
-      poinBgColor = const Color(0xFFD1FAE5);
-      severity = 'Rendah';
+      poinColor = const Color(0xFF10B981); // Emerald 500
+      poinBgColor = const Color(0xFFD1FAE5); // Emerald 100
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF64748B).withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Theme(
-        data: Theme.of(context).copyWith(
-          dividerColor: Colors.transparent,
-        ),
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          childrenPadding: const EdgeInsets.only(bottom: 16),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           leading: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [poinColor.withOpacity(0.8), poinColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: poinColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: poinColor.withOpacity(0.3),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.person_rounded,
-              color: Colors.white,
+              color: poinColor,
               size: 24,
             ),
           ),
           title: Text(
             nama,
             style: const TextStyle(
-              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              fontSize: 15,
+              color: Color(0xFF1E293B),
             ),
           ),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Row(
               children: [
-                Icon(Icons.list_alt_rounded, size: 14, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  '$totalPelanggaran pelanggaran',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          trailing: SizedBox(
-            width: 70,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: poinBgColor,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    '$totalPoin poin',
+                    '$totalPoin Poin',
                     style: TextStyle(
                       color: poinColor,
                       fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                const SizedBox(height: 3),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: poinColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    severity,
-                    style: TextStyle(
-                      color: poinColor,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                    ),
+                const SizedBox(width: 8),
+                Text(
+                  '$totalPelanggaran Pelanggaran',
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: pelanggaranList.map((pelanggaran) {
-                  return _buildMobilePelanggaranItem(
-                    jenis: pelanggaran['jenis_pelanggaran'] ?? '-',
-                    poin: pelanggaran['poin']?.toInt() ?? 0,
-                    tanggal: pelanggaran['tanggal'] ?? '-',
-                    waktu: pelanggaran['waktu'] ?? '-',
-                    keterangan: pelanggaran['keterangan'] ?? '-',
-                  );
-                }).toList(),
-              ),
+            Container(
+              height: 1,
+              color: Colors.grey[100],
+              margin: const EdgeInsets.only(bottom: 16),
             ),
+            ...pelanggaranList.map((pelanggaran) => _buildDetailPelanggaranRow(pelanggaran)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMobilePelanggaranItem({
-    required String jenis,
-    required int poin,
-    required String tanggal,
-    required String waktu,
-    required String keterangan,
-  }) {
-    String displayTanggal = tanggal;
-    String displayWaktu = waktu;
+  Widget _buildDetailPelanggaranRow(Map<String, dynamic> pelanggaran) {
+    String displayTanggal = pelanggaran['tanggal'] ?? '-';
+    String displayWaktu = pelanggaran['waktu'] ?? '-';
 
     try {
-      if (waktu == '-' || waktu.isEmpty) {
-        final parsed = DateTime.tryParse(tanggal);
+      if (displayWaktu == '-' || displayWaktu.isEmpty) {
+        final parsed = DateTime.tryParse(displayTanggal);
         if (parsed != null) {
           displayTanggal = DateFormat('dd MMM yyyy').format(parsed);
           displayWaktu = DateFormat('HH:mm').format(parsed);
@@ -1704,96 +1661,73 @@ class DetailKelasPage extends StatelessWidget {
     } catch (_) {}
 
     return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Text(
-                  jenis,
+                  pelanggaran['jenis_pelanggaran'] ?? '-',
                   style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF334155),
+                    fontSize: 14,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDC2626).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFFEE2E2)),
                 ),
                 child: Text(
-                  '$poin poin',
+                  '-${pelanggaran['poin']?.toInt() ?? 0}',
                   style: const TextStyle(
                     color: Color(0xFFDC2626),
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 6),
+              Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey[500]),
+              const SizedBox(width: 4),
               Text(
                 displayTanggal,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
               ),
-              const SizedBox(width: 16),
-              Icon(Icons.access_time_rounded, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 6),
+              const SizedBox(width: 12),
+              Icon(Icons.access_time_rounded, size: 12, color: Colors.grey[500]),
+              const SizedBox(width: 4),
               Text(
                 displayWaktu,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
               ),
             ],
           ),
-          if (keterangan != '-') ...[
+          if (pelanggaran['keterangan'] != null && pelanggaran['keterangan'] != '-') ...[
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.info_outline_rounded, size: 14, color: Colors.grey[600]),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      keterangan,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
+            Text(
+              pelanggaran['keterangan'] ?? '',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
               ),
             ),
           ],
@@ -1801,4 +1735,5 @@ class DetailKelasPage extends StatelessWidget {
       ),
     );
   }
+
 }

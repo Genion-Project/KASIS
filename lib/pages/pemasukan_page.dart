@@ -109,7 +109,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: _isLoading
           ? Center(
               child: CircularProgressIndicator(
@@ -125,7 +125,13 @@ class _PemasukanPageState extends State<PemasukanPage> {
                   floating: false,
                   pinned: true,
                   elevation: 0,
-                  backgroundColor: Colors.green[600],
+                  backgroundColor: const Color(0xFF047857),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(32),
+                      bottomRight: Radius.circular(32),
+                    ),
+                  ),
                   flexibleSpace: FlexibleSpaceBar(
                     background: Container(
                       decoration: BoxDecoration(
@@ -133,10 +139,13 @@ class _PemasukanPageState extends State<PemasukanPage> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Colors.green[700]!,
-                            Colors.green[500]!,
-                            Colors.teal[400]!,
+                            Color(0xFF047857), // Emerald 700
+                            Color(0xFF10B981), // Emerald 500
                           ],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(32),
+                          bottomRight: Radius.circular(32),
                         ),
                       ),
                       child: Stack(
@@ -200,21 +209,13 @@ class _PemasukanPageState extends State<PemasukanPage> {
                     margin: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                     padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white,
-                          Colors.green[50]!,
-                        ],
-                      ),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.green.withOpacity(0.15),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                          spreadRadius: 0,
+                          color: const Color(0xFF10B981).withOpacity(0.15),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -237,24 +238,23 @@ class _PemasukanPageState extends State<PemasukanPage> {
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              'Total Pemasukan',
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
+                                'Total Pemasukan',
+                                style: TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 20),
                         Text(
                           'Rp ${_totalPemasukan.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                          style: TextStyle(
-                            color: Colors.green[800],
-                            fontSize: 38,
+                            style: TextStyle(
+                            color: Color(0xFF047857),
+                            fontSize: 40,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
+                            letterSpacing: -1,
                             height: 1.2,
                           ),
                         ),
@@ -309,21 +309,17 @@ class _PemasukanPageState extends State<PemasukanPage> {
                           width: 4,
                           height: 24,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Colors.green[600]!, Colors.teal[400]!],
-                            ),
-                            borderRadius: BorderRadius.circular(2),
+                            color: const Color(0xFF10B981),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                         ),
                         const SizedBox(width: 12),
                         const Text(
                           'Riwayat Transaksi',
                           style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
                           ),
                         ),
                       ],
@@ -404,20 +400,13 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                             width: 56,
                                             height: 56,
                                             decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                                colors: [
-                                                  item['color'].withOpacity(0.15),
-                                                  item['color'].withOpacity(0.05),
-                                                ],
-                                              ),
+                                              color: item['color'].withOpacity(0.1),
                                               borderRadius: BorderRadius.circular(16),
                                             ),
                                             child: Icon(
                                               item['icon'],
                                               color: item['color'],
-                                              size: 28,
+                                              size: 26,
                                             ),
                                           ),
                                           const SizedBox(width: 16),
@@ -483,11 +472,10 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                             children: [
                                               Text(
                                                 'Rp ${item['jumlah'].toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                                                style: TextStyle(
-                                                  color: Colors.green[700],
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 17,
-                                                  letterSpacing: -0.5,
+                                                  style: TextStyle(
+                                                  color: Color(0xFF059669),
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 16,
                                                 ),
                                               ),
                                             ],
@@ -520,7 +508,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
               ),
               child: FloatingActionButton.extended(
                 onPressed: _tambahPemasukan,
-                backgroundColor: Colors.green[600],
+                backgroundColor: const Color(0xFF059669),
                 elevation: 0,
                 icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
                 label: const Text(
