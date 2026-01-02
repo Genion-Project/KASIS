@@ -12,6 +12,7 @@ import 'package:bendahara_app/pages/profile_page.dart';
 import 'package:bendahara_app/pages/about_page.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'dart:io';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,7 +31,48 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     print('\n🚀 [HOME] HomeScreen initialized');
     _loadUserData();
-    _loadAktivitas();
+    _checkInternetAndLoadData();
+  }
+
+  Future<void> _checkInternetAndLoadData() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        _loadAktivitas();
+      }
+    } on SocketException catch (_) {
+      _showOfflineDialog();
+    }
+  }
+
+  void _showOfflineDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, color: Colors.orange[800]),
+            SizedBox(width: 10),
+            Text('Koneksi Terputus'),
+          ],
+        ),
+        content: Text('Tidak dapat terhubung ke internet. Mohon periksa koneksi Anda.'),
+        actions: [
+          TextButton(
+            onPressed: () => exit(0), // Keluar aplikasi
+            child: Text('Keluar', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Masuk offline mode (tetap di halaman tapi data mungkin kosong)
+            },
+            child: Text('Masuk Offline Mode'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadUserData() async {
@@ -115,7 +157,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return result;
     } catch (e) {
       print('❌ [AKTIVITAS] ERROR: $e');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
       throw Exception('Gagal memuat aktivitas: $e');
     }
   }
@@ -1490,6 +1531,55 @@ class _HomeScreenState extends State<HomeScreen> {
                       SizedBox(height: 2),
                       Text(
                         'Gagal memuat aktivitas',
+                        style: TextStyle(
+                          color: Colors.red[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else if (snapshot.hasError) {
+          return Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.red[100]!),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.error_outline_rounded,
+                    color: Colors.red[600],
+                    size: 22,
+                  ),
+                ),
+                SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Terjadi Kesalahan',
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        snapshot.error.toString().replaceFirst('Exception: ', ''),
                         style: TextStyle(
                           color: Colors.red[600],
                           fontSize: 12,

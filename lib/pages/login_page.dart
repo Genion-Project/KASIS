@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../screens/main_screen.dart';
 import '../pages/register_page.dart';
+import '../pages/forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -228,7 +229,10 @@ class _LoginPageState extends State<LoginPage> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // TODO: Implement forgot password
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ForgotPasswordPage()),
+                          );
                         },
                         child: Text(
                           'Lupa Password?',
@@ -446,7 +450,10 @@ class _LoginPageState extends State<LoginPage> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              // TODO: Implement forgot password
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => ForgotPasswordPage()),
+                              );
                             },
                             child: Text(
                               'Lupa Password?',
