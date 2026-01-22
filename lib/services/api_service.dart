@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'https://serururu.pythonanywhere.com'; // ganti sesuai server
+  static const String baseUrl = 'https://api-kasis.ecotrace.site/'; // ganti sesuai server
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/login');
@@ -91,11 +91,13 @@ class ApiService {
   }
 
   static Future<List<Map<String, dynamic>>> getMemberPayments(int siswaId) async {
-    final url = Uri.parse('$baseUrl/members/$siswaId/payments');
+    final url = Uri.parse('$baseUrl/users/$siswaId/payments');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {
-      throw Exception('Gagal mengambil detail pembayaran');
+      print('❌ Gagal ambil detail pembayaran: ${response.statusCode}');
+      print('❌ Response: ${response.body}');
+      throw Exception('Gagal mengambil detail pembayaran (${response.statusCode}): ${response.body}');
     }
 
     final List data = jsonDecode(response.body);
@@ -170,7 +172,7 @@ class ApiService {
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'siswa_id': siswaId,
+        'user_id': siswaId,
         'minggu_ke': mingguKe,
         'jumlah': jumlah,
         'keterangan': keterangan,
@@ -327,15 +329,14 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> registerUser({
+  // === OTP & Registration ===
+  static Future<void> requestOtp({
     required String email,
     required String nama,
     required String noTelp,
-    required String password,
-    String jabatan = 'Anggota',
   }) async {
-    final url = Uri.parse('$baseUrl/register');
-
+    final url = Uri.parse('$baseUrl/request-otp');
+    
     try {
       final response = await http.post(
         url,
@@ -344,19 +345,161 @@ class ApiService {
           'email': email,
           'nama': nama,
           'no_telp': noTelp,
-          'password': password,
-          'jabatan': jabatan,
         }),
       );
 
-      if (response.statusCode == 201) {
-        return jsonDecode(response.body); // sukses
-      } else {
-        final body = jsonDecode(response.body);
-        throw Exception(body['error'] ?? 'Gagal mendaftarkan user');
+      print('requestOtp Status: ${response.statusCode}');
+      print('requestOtp Response: ${response.body}');
+
+      if (response.statusCode != 200) {
+        // Check if response is JSON or HTML
+        if (response.body.trim().startsWith('<') || response.body.trim().startsWith('<!DOCTYPE')) {
+          throw Exception('Server error (${response.statusCode}). Endpoint mungkin tidak tersedia.');
+        }
+        
+        try {
+          final body = jsonDecode(response.body);
+          throw Exception(body['error'] ?? 'Gagal mengirim OTP');
+        } catch (e) {
+          throw Exception('Gagal mengirim OTP (${response.statusCode})');
+        }
       }
     } catch (e) {
-      throw Exception('Terjadi kesalahan: $e');
+      if (e is Exception) rethrow;
+      throw Exception('Koneksi gagal: $e');
+    }
+  }
+
+  static Future<void> verifyOtp({
+    required String email,
+    required String otp,
+    required String nama,
+    required String noTelp,
+  }) async {
+    final url = Uri.parse('$baseUrl/verify-otp');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+        }),
+      );
+
+      print('verifyOtp Status: ${response.statusCode}');
+      print('verifyOtp Response: ${response.body}');
+
+      if (response.statusCode != 200) {
+        // Check if response is JSON or HTML
+        if (response.body.trim().startsWith('<') || response.body.trim().startsWith('<!DOCTYPE')) {
+          throw Exception('Server error (${response.statusCode}). Endpoint mungkin tidak tersedia.');
+        }
+        
+        try {
+          final body = jsonDecode(response.body);
+          throw Exception(body['error'] ?? 'Kode verifikasi salah');
+        } catch (e) {
+          throw Exception('Kode verifikasi salah (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Koneksi gagal: $e');
+    }
+  }
+
+  static Future<void> setPassword({
+    required String email,
+    required String password,
+  }) async {
+    final url = Uri.parse('$baseUrl/set-password');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      print('setPassword Status: ${response.statusCode}');
+      print('setPassword Response: ${response.body}');
+
+      if (response.statusCode != 200) {
+        // Check if response is JSON or HTML
+        if (response.body.trim().startsWith('<') || response.body.trim().startsWith('<!DOCTYPE')) {
+          throw Exception('Server error (${response.statusCode}). Endpoint mungkin tidak tersedia.');
+        }
+        
+        try {
+          final body = jsonDecode(response.body);
+          throw Exception(body['error'] ?? 'Gagal menyimpan password');
+        } catch (e) {
+          throw Exception('Gagal menyimpan password (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Koneksi gagal: $e');
+    }
+  }
+
+  // === Forgot Password ===
+  static Future<void> forgotPasswordRequest(String email) async {
+    final url = Uri.parse('$baseUrl/forgot-password/request');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Gagal memproses permintaan');
+    }
+  }
+
+  static Future<void> forgotPasswordVerify({
+    required String email,
+    required String otp,
+  }) async {
+    final url = Uri.parse('$baseUrl/forgot-password/verify');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'otp': otp,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'OTP tidak valid');
+    }
+  }
+
+  static Future<void> forgotPasswordReset({
+    required String email,
+    required String password,
+  }) async {
+    final url = Uri.parse('$baseUrl/forgot-password/reset');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Gagal reset password');
     }
   }
 
@@ -371,7 +514,7 @@ class ApiService {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'siswa_id': siswaId,
+          'user_id': siswaId,
           'minggu_ke': mingguKe,
         }),
       );
