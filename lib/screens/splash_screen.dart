@@ -29,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
     
     if (isLoggedIn) {
       // User sudah login, langsung ke MainScreen
-      Navigator.pushReplacementNamed(context, '/main');
+      Navigator.pushReplacementNamed(context, '/home');
     } else {
       // User belum login, cek apakah sudah pernah lihat onboarding
       bool hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
@@ -49,31 +49,47 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       backgroundColor: Colors.blue,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Ganti Icon dengan Image.asset untuk logo PNG
-            Image.asset(
-              'assets/images/logo.png', // path ke logo Anda
-              width: 150,
-              height: 150,
-              fit: BoxFit.contain,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Ganti Icon dengan Image.asset untuk logo PNG
+                Image.asset(
+                  'assets/images/logo.png', // path ke logo Anda
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.school_rounded, color: Colors.white, size: 80),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'OSIS SMK NURUL ISLAM',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+                const CircularProgressIndicator(
+                  color: Colors.white,
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'OSIS SMK NURUL ISLAM',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(
-              color: Colors.white,
-            ),
-          ],
+          ),
         ),
       ),
     );

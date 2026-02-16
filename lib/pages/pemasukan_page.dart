@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/transaction_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/add_transaction_screen.dart';
-import '../services/api_service.dart';
+import '../models/transaction_model.dart';
+import 'package:intl/intl.dart';
 
 class PemasukanPage extends StatefulWidget {
   const PemasukanPage({super.key});
@@ -11,15 +14,16 @@ class PemasukanPage extends StatefulWidget {
 }
 
 class _PemasukanPageState extends State<PemasukanPage> {
-  List<Map<String, dynamic>> _riwayatPemasukan = [];
-  bool _isLoading = false;
   String _jabatan = '';
 
   @override
   void initState() {
     super.initState();
     _loadJabatan();
-    _loadPemasukan();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TransactionProvider>().fetchDashboardData();
+    });
   }
 
   Future<void> _loadJabatan() async {
@@ -29,47 +33,12 @@ class _PemasukanPageState extends State<PemasukanPage> {
     });
   }
 
-  Future<void> _loadPemasukan() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final data = await ApiService.getPemasukan();
-      setState(() {
-        _riwayatPemasukan = data.map((item) {
-          final jumlah = (item['jumlah'] ?? 0).toDouble();
-          return {
-            'id': item['id'],
-            'judul': jumlah == 2000 ? 'Uang Kas' : (item['judul'] ?? 'Pemasukan'),
-            'jumlah': jumlah,
-            'tanggal': DateTime.parse(item['tanggal'] ?? DateTime.now().toIso8601String()),
-            'keterangan': item['keterangan'] ?? '',
-            'icon': jumlah == 2000 ? Icons.account_balance_wallet : Icons.attach_money,
-            'color': jumlah == 2000 ? Colors.blue : Colors.green,
-          };
-        }).toList();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memuat data: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
-    }
+  void _loadPemasukan() {
+    context.read<TransactionProvider>().fetchDashboardData();
   }
 
-  double get _totalPemasukan {
-    return _riwayatPemasukan.fold(0, (sum, item) => sum + item['jumlah']);
+  double _getTotalPemasukan(List<TransactionModel> data) {
+    return data.fold(0, (sum, item) => sum + item.amount);
   }
 
   void _tambahPemasukan() async {
@@ -95,11 +64,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
   }
 
   String _formatTanggal(DateTime tanggal) {
-    final bulan = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    return '${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
+    return DateFormat('dd MMM yyyy', 'id_ID').format(tanggal);
   }
 
   bool get _canAddTransaction {
@@ -110,14 +75,22 @@ class _PemasukanPageState extends State<PemasukanPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: _isLoading
-          ? Center(
+      body: Consumer<TransactionProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading && provider.pemasukan.isEmpty) {
+            return Center(
               child: CircularProgressIndicator(
                 color: Colors.green[600],
                 strokeWidth: 3,
               ),
-            )
-          : CustomScrollView(
+            );
+          }
+          
+          if (provider.error != null && provider.pemasukan.isEmpty) {
+            return _buildErrorState();
+          }
+
+          return CustomScrollView(
               slivers: [
                 // Modern App Bar dengan gradient
                 SliverAppBar(
@@ -150,7 +123,6 @@ class _PemasukanPageState extends State<PemasukanPage> {
                       ),
                       child: Stack(
                         children: [
-                          // Decorative circles
                           Positioned(
                             right: -50,
                             top: -50,
@@ -249,10 +221,10 @@ class _PemasukanPageState extends State<PemasukanPage> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Rp ${_totalPemasukan.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(_getTotalPemasukan(provider.pemasukan)),
                             style: TextStyle(
                             color: Color(0xFF047857),
-                            fontSize: 40,
+                            fontSize: 32,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -1,
                             height: 1.2,
@@ -284,7 +256,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '${_riwayatPemasukan.length} Transaksi',
+                                '${provider.pemasukan.length} Transaksi',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
@@ -328,7 +300,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                 ),
 
                 // List Transaksi
-                _riwayatPemasukan.isEmpty
+                provider.pemasukan.isEmpty
                     ? SliverFillRemaining(
                         child: Center(
                           child: Column(
@@ -372,7 +344,12 @@ class _PemasukanPageState extends State<PemasukanPage> {
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final item = _riwayatPemasukan[index];
+                              final item = provider.pemasukan[index];
+                              final isUangKas = item.amount == 2000;
+                              final title = isUangKas ? 'Uang Kas' : (item.title ?? 'Pemasukan');
+                              final icon = isUangKas ? Icons.account_balance_wallet : Icons.attach_money;
+                              final color = isUangKas ? Colors.blue : Colors.green;
+
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 14),
                                 decoration: BoxDecoration(
@@ -391,7 +368,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                   color: Colors.transparent,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(20),
-                                    onTap: () => _showDetailModal(item),
+                                    onTap: () => _showDetailModal(item, title, icon, color),
                                     child: Padding(
                                       padding: const EdgeInsets.all(18),
                                       child: Row(
@@ -400,12 +377,12 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                             width: 56,
                                             height: 56,
                                             decoration: BoxDecoration(
-                                              color: item['color'].withOpacity(0.1),
+                                              color: color.withOpacity(0.1),
                                               borderRadius: BorderRadius.circular(16),
                                             ),
                                             child: Icon(
-                                              item['icon'],
-                                              color: item['color'],
+                                              icon,
+                                              color: color,
                                               size: 26,
                                             ),
                                           ),
@@ -415,7 +392,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  item['judul'],
+                                                  title,
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.w700,
                                                     fontSize: 16,
@@ -424,7 +401,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                                 ),
                                                 const SizedBox(height: 6),
                                                 Text(
-                                                  item['keterangan'],
+                                                  item.description,
                                                   style: TextStyle(
                                                     color: Colors.grey[600],
                                                     fontSize: 13,
@@ -453,7 +430,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                                       ),
                                                       const SizedBox(width: 6),
                                                       Text(
-                                                        _formatTanggal(item['tanggal']),
+                                                        _formatTanggal(item.date),
                                                         style: TextStyle(
                                                           color: Colors.grey[600],
                                                           fontSize: 11,
@@ -471,7 +448,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                             crossAxisAlignment: CrossAxisAlignment.end,
                                             children: [
                                               Text(
-                                                'Rp ${item['jumlah'].toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                                                NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(item.amount),
                                                   style: TextStyle(
                                                   color: Color(0xFF059669),
                                                   fontWeight: FontWeight.w700,
@@ -487,12 +464,14 @@ class _PemasukanPageState extends State<PemasukanPage> {
                                 ),
                               );
                             },
-                            childCount: _riwayatPemasukan.length,
+                            childCount: provider.pemasukan.length,
                           ),
                         ),
                       ),
               ],
-            ),
+            );
+          },
+        ),
       floatingActionButton: _canAddTransaction
           ? Container(
               decoration: BoxDecoration(
@@ -525,7 +504,8 @@ class _PemasukanPageState extends State<PemasukanPage> {
           : null,
     );
   }
-  void _showDetailModal(Map<String, dynamic> item) {
+
+  void _showDetailModal(TransactionModel item, String title, IconData icon, Color color) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -556,10 +536,10 @@ class _PemasukanPageState extends State<PemasukanPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: item['color'].withOpacity(0.1),
+                    color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(item['icon'], color: item['color'], size: 32),
+                  child: Icon(icon, color: color, size: 32),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -567,14 +547,14 @@ class _PemasukanPageState extends State<PemasukanPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item['judul'],
+                        title,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        _formatTanggal(item['tanggal']),
+                        _formatTanggal(item.date),
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 14,
@@ -586,9 +566,9 @@ class _PemasukanPageState extends State<PemasukanPage> {
               ],
             ),
             const SizedBox(height: 24),
-            _buildDetailRow('Jumlah', 'Rp ${item['jumlah'].toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}', isBold: true, valueColor: Colors.green[700]),
+            _buildDetailRow('Jumlah', NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(item.amount), isBold: true, valueColor: Colors.green[700]),
             const Divider(height: 32),
-            _buildDetailRow('Keterangan', item['keterangan']),
+            _buildDetailRow('Keterangan', item.description),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -635,6 +615,50 @@ class _PemasukanPageState extends State<PemasukanPage> {
           ),
         ),
       ],
+    );
+  }
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.wifi_off_rounded, size: 64, color: Colors.red[300]),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Koneksi Gagal',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Gagal mengambil data pemasukan.\nMohon periksa koneksi internet Anda.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: _loadPemasukan,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Coba Lagi'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF047857),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -21,7 +21,6 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
 
   // Step 2
   final TextEditingController kodeController = TextEditingController();
-  final String kodeVerifikasiBenar = "KETOSIMUT";
 
   // Step 3
   final TextEditingController passwordController = TextEditingController();
@@ -110,21 +109,8 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     return re.hasMatch(email);
   }
 
-  Future<void> handleRegister() async {
-    final nama = namaController.text.trim();
-    final email = emailController.text.trim();
-    final noTelp = noTelpController.text.trim();
+  Future<void> handleFinalizeRegistration() async {
     final password = passwordController.text;
-
-    if (nama.isEmpty || email.isEmpty || noTelp.isEmpty || password.isEmpty) {
-      showMsg('Lengkapi semua field sebelum mendaftar.', isError: true);
-      return;
-    }
-
-    if (!_validateEmail(email)) {
-      showMsg('Format email tidak valid.', isError: true);
-      return;
-    }
 
     if (password.length < 6) {
       showMsg('Password minimal 6 karakter.', isError: true);
@@ -134,17 +120,12 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     setState(() => isLoading = true);
 
     try {
-      final result = await ApiService.registerUser(
-        email: email,
-        nama: nama,
-        noTelp: noTelp,
+      await ApiService.setPassword(
+        email: emailController.text.trim(),
         password: password,
-        jabatan: selectedJabatan,
       );
 
-      final message = result['message'] ??
-          (result['user'] != null ? 'Registrasi berhasil' : 'Registrasi berhasil');
-      showMsg(message);
+      showMsg("Password berhasil disimpan. Silakan login.");
 
       if (!mounted) return;
       await Future.delayed(Duration(milliseconds: 500));
@@ -153,7 +134,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
         MaterialPageRoute(builder: (_) => const LoginPage()),
       );
     } catch (e) {
-      showMsg('Gagal registrasi: ${e.toString()}', isError: true);
+      showMsg('Gagal set password: ${e.toString().replaceAll("Exception: ", "")}', isError: true);
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -901,7 +882,8 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
             SizedBox(height: isDesktop ? 20 : 8),
             _buildButton(
               text: "Lanjutkan",
-              onPressed: () {
+              isLoading: isLoading,
+              onPressed: () async {
                 if (namaController.text.isEmpty ||
                     emailController.text.isEmpty ||
                     noTelpController.text.isEmpty) {
@@ -912,7 +894,21 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                   showMsg("Email tidak valid", isError: true);
                   return;
                 }
-                nextPage();
+
+                setState(() => isLoading = true);
+                try {
+                  await ApiService.requestOtp(
+                    email: emailController.text.trim(),
+                    nama: namaController.text.trim(),
+                    noTelp: noTelpController.text.trim(),
+                  );
+                  showMsg("OTP berhasil dikirim ke email");
+                  nextPage();
+                } catch (e) {
+                  showMsg(e.toString().replaceAll('Exception: ', ''), isError: true);
+                } finally {
+                  setState(() => isLoading = false);
+                }
               },
               isDesktop: isDesktop,
             ),
@@ -1008,12 +1004,25 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                   flex: 2,
                   child: _buildButton(
                     text: "Verifikasi",
-                    onPressed: () {
-                      if (kodeController.text.trim() == kodeVerifikasiBenar) {
-                        showMsg("Kode verifikasi berhasil!");
+                    isLoading: isLoading,
+                    onPressed: () async {
+                      if (kodeController.text.isEmpty) {
+                        showMsg("Masukkan kode verifikasi", isError: true);
+                        return;
+                      }
+
+                      setState(() => isLoading = true);
+                      try {
+                        await ApiService.verifyOtp(
+                          email: emailController.text.trim(),
+                          otp: kodeController.text.trim(),
+                        );
+                        showMsg("Verifikasi berhasil!");
                         nextPage();
-                      } else {
-                        showMsg("Kode verifikasi salah", isError: true);
+                      } catch (e) {
+                        showMsg(e.toString().replaceAll('Exception: ', ''), isError: true);
+                      } finally {
+                        setState(() => isLoading = false);
                       }
                     },
                     isDesktop: isDesktop,
@@ -1053,98 +1062,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
               ),
             ),
             SizedBox(height: isDesktop ? 24 : 32),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: DropdownButtonFormField<String>(
-                value: selectedJabatan,
-                items: jabatanList.map((jab) {
-                  IconData icon;
-                  switch (jab) {
-                    case "Developer":
-                      icon = Icons.code_rounded;
-                      break;
-                    case "Ketua OSIS":
-                      icon = Icons.workspace_premium_rounded;
-                      break;
-                    case "Sekretaris":
-                      icon = Icons.edit_note_rounded;
-                      break;
-                    case "Bendahara":
-                      icon = Icons.account_balance_wallet_rounded;
-                      break;
-                    case "Guru":
-                      icon = Icons.school_rounded;
-                      break;
-                    default:
-                      icon = Icons.person_rounded;
-                  }
-                  return DropdownMenuItem(
-                    value: jab,
-                    child: Row(
-                      children: [
-                        Icon(icon, size: isDesktop ? 18 : 20, color: Color(0xFF1976D2)),
-                        SizedBox(width: isDesktop ? 8 : 12),
-                        Text(
-                          jab,
-                          style: TextStyle(fontSize: isDesktop ? 13 : 14),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                decoration: InputDecoration(
-                  labelText: "Jabatan",
-                  labelStyle: TextStyle(
-                    color: Colors.grey[600], 
-                    fontSize: isDesktop ? 13 : 14
-                  ),
-                  prefixIcon: Container(
-                    margin: EdgeInsets.all(12),
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF1976D2).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(isDesktop ? 10 : 12),
-                    ),
-                    child: Icon(
-                      Icons.work_outline_rounded, 
-                      color: Color(0xFF1976D2), 
-                      size: isDesktop ? 18 : 20
-                    ),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(isDesktop ? 12 : 16),
-                    borderSide: BorderSide(color: Color(0xFF1976D2), width: 2),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: isDesktop ? 16 : 20, 
-                    vertical: isDesktop ? 16 : 18
-                  ),
-                ),
-                onChanged: (val) {
-                  if (val != null) setState(() => selectedJabatan = val);
-                },
-              ),
-            ),
+              // Jabatan dropdown removed
             SizedBox(height: isDesktop ? 16 : 16),
             _buildTextField(
               controller: passwordController,
@@ -1198,8 +1116,8 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                 Expanded(
                   flex: 2,
                   child: _buildButton(
-                    text: "Daftar Sekarang",
-                    onPressed: handleRegister,
+                    text: "Selesai",
+                    onPressed: handleFinalizeRegistration,
                     isLoading: isLoading,
                     isDesktop: isDesktop,
                   ),

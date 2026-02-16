@@ -8,6 +8,9 @@ import '../widgets/rekap/filter_section.dart';
 import '../widgets/rekap/filter_tabs.dart';
 import '../widgets/rekap/pelanggaran_card.dart';
 import '../services/api_service.dart';
+import '../widgets/rekap/weekly_trend_chart.dart';
+import 'package:provider/provider.dart';
+import '../providers/violation_provider.dart';
 
 class RiwayatPage extends StatefulWidget {
   const RiwayatPage({super.key});
@@ -19,14 +22,16 @@ class RiwayatPage extends StatefulWidget {
 class _RiwayatPageState extends State<RiwayatPage> {
   DateTimeRange? selectedDateRange;
   String activeFilter = 'Semua';
+  String _searchQuery = '';
   final PageController _pageController = PageController();
-  late Future<List<Map<String, dynamic>>> pelanggaranFuture;
   final ScrollController _scrollController = ScrollController();
-
+  
   @override
   void initState() {
     super.initState();
-    pelanggaranFuture = ApiService.getPelanggaran();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ViolationProvider>().fetchViolations();
+    });
   }
 
   @override
@@ -83,9 +88,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
             ),
           );
 
-          setState(() {
-            pelanggaranFuture = ApiService.getPelanggaran();
-          });
+          context.read<ViolationProvider>().fetchViolations();
         },
       ),
     );
@@ -95,6 +98,10 @@ class _RiwayatPageState extends State<RiwayatPage> {
     setState(() {
       selectedDateRange = null;
     });
+  }
+
+  Future<void> _refreshData() async {
+    await context.read<ViolationProvider>().fetchViolations();
   }
 
   void _onDateRangeChanged(DateTimeRange? dateRange) {
@@ -122,37 +129,54 @@ class _RiwayatPageState extends State<RiwayatPage> {
     });
   }
 
-  List<Map<String, dynamic>> _filterByDateRange(List<Map<String, dynamic>> data) {
+  List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> data) {
+    List<Map<String, dynamic>> filtered = data;
+
+    // Filter by Date Range
     if (selectedDateRange == null) {
-      return _filterHariIni(data);
+      filtered = _filterHariIni(filtered);
+    } else {
+      filtered = filtered.where((item) {
+        try {
+          final tanggalString = (item['tanggal'] ?? '').toString();
+          if (tanggalString.isEmpty) return false;
+
+          // Parse only date part to avoid timezone issues
+          final datePart = tanggalString.split(' ')[0];
+          final tanggal = DateTime.parse(datePart);
+          
+          final start = DateTime(
+            selectedDateRange!.start.year,
+            selectedDateRange!.start.month,
+            selectedDateRange!.start.day,
+          );
+          
+          final end = DateTime(
+            selectedDateRange!.end.year,
+            selectedDateRange!.end.month,
+            selectedDateRange!.end.day,
+            23, 59, 59 // End of day
+          );
+
+          return (tanggal.isAtSameMomentAs(start) || tanggal.isAfter(start)) && 
+                 (tanggal.isAtSameMomentAs(end) || tanggal.isBefore(end));
+        } catch (e) {
+          return false;
+        }
+      }).toList();
     }
 
-    return data.where((item) {
-      try {
-        final tanggalString = (item['tanggal'] ?? '').toString();
-        if (tanggalString.isEmpty) return false;
+    // Filter by Search Query
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((item) {
+        final nama = (item['nama'] ?? '').toString().toLowerCase();
+        final kelas = (item['kelas'] ?? '').toString().toLowerCase();
+        final query = _searchQuery.toLowerCase();
+        return nama.contains(query) || kelas.contains(query);
+      }).toList();
+    }
 
-        final tanggal = DateTime.parse(tanggalString.split(' ')[0]);
-        final startDate = DateTime(
-          selectedDateRange!.start.year,
-          selectedDateRange!.start.month,
-          selectedDateRange!.start.day,
-        );
-        final endDate = DateTime(
-          selectedDateRange!.end.year,
-          selectedDateRange!.end.month,
-          selectedDateRange!.end.day,
-          23,
-          59,
-          59,
-        );
-
-        return tanggal.isAfter(startDate.subtract(const Duration(seconds: 1))) &&
-            tanggal.isBefore(endDate.add(const Duration(seconds: 1)));
-      } catch (e) {
-        return false;
-      }
-    }).toList();
+    return filtered;
   }
 
   List<Map<String, dynamic>> _filterHariIni(List<Map<String, dynamic>> data) {
@@ -211,239 +235,424 @@ class _RiwayatPageState extends State<RiwayatPage> {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
-  return Scaffold(
-    backgroundColor: const Color(0xFFF8FAFC),
-    body: Row(
-      children: [
-        // Sidebar untuk desktop
-        _buildDesktopSidebar(),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showInputDialog,
+        backgroundColor: const Color(0xFF2563EB),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Input Pelanggaran'),
+        elevation: 4,
+        highlightElevation: 8,
+      ),
+      body: Row(
+        children: [
+          // Sidebar untuk desktop
+          _buildDesktopSidebar(),
 
-        // Konten utama
-        Expanded(
-          child: Column(
-            children: [
-              // AppBar untuk desktop
-              Container(
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    const SizedBox(width: 16),
-
-                    // 🔙 Tombol kembali ke Home
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                      tooltip: 'Kembali ke Home',
-                      onPressed: () {
-                        Navigator.pop(context); // Kembali ke halaman sebelumnya
-                        // Jika kamu ingin langsung ke halaman Home tertentu:
-                        // Navigator.pushReplacementNamed(context, '/home');
-                      },
-                    ),
-
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Rekap Pelanggaran',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
+          // Konten utama
+          Expanded(
+            child: Column(
+              children: [
+                // AppBar untuk desktop
+                Container(
+                  height: 80,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // 🔙 Tombol kembali ke Home
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                          color: Colors.grey[700],
+                          tooltip: 'Kembali ke Home',
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
 
-              // Filter Tabs
-              FilterTabs(
-                activeFilter: activeFilter,
-                onFilterChanged: _onFilterChanged,
-              ),
-
-              // Konten PageView
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  children: [
-                    _buildDesktopSemuaPelanggaranPage(),
-                    _buildDesktopRekapPage(),
-                  ],
+                      const SizedBox(width: 20),
+                      
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Rekap Pelanggaran',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                          Text(
+                            'Kelola data pelanggaran siswa',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const Spacer(),
+                      
+                      // Search Bar
+                      Container(
+                        width: 300,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: TextField(
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Cari siswa atau kelas...',
+                            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                            prefixIcon: Icon(Icons.search_rounded, color: Colors.grey[400], size: 22),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            suffixIcon: _searchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: Icon(Icons.close_rounded, color: Colors.grey[400], size: 18),
+                                    onPressed: () {
+                                      setState(() {
+                                        _searchQuery = '';
+                                      });
+                                    },
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Filter Tabs
+                Container(
+                  color: const Color(0xFFF8FAFC),
+                  padding: const EdgeInsets.only(top: 24, left: 24, right: 24),
+                  child: FilterTabs(
+                    activeFilter: activeFilter,
+                    onFilterChanged: _onFilterChanged,
+                  ),
+                ),
+
+                // Konten PageView
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    physics: const NeverScrollableScrollPhysics(), // Disable swipe to avoid conflict
+                    children: [
+                      _buildDesktopSemuaPelanggaranPage(),
+                      _buildDesktopRekapPage(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
 
   Widget _buildDesktopSidebar() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: pelanggaranFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            width: 300,
+    return Consumer<ViolationProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return SizedBox(
+            width: 380,
             child: const Center(child: CircularProgressIndicator()),
           );
         }
 
-        final data = snapshot.data ?? [];
-        final filteredData = _filterByDateRange(data);
+        final data = provider.violations;
+        final filteredData = _applyFilters(data);
         
         return Container(
-          width: 300,
+          width: 380,
           decoration: BoxDecoration(
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: const Offset(2, 0),
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 20,
+                offset: const Offset(4, 0),
               ),
             ],
           ),
           child: SingleChildScrollView(
             child: Column(
               children: [
-                // Header Summary dalam bentuk sidebar
+                // Header Summary dengan Card Putih di atas Background Biru
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)], // Slate 900 to Blue 600
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                   ),
                   child: Column(
                     children: [
+                      // Total Pelanggan Card
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.assessment_outlined, 
-                                 color: Colors.white, size: 32),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Total Pelanggaran',
-                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${filteredData.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 42,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildDesktopStatCard(
-                        icon: Icons.calendar_month_rounded,
-                        iconBg: const Color(0xFFFFD93D),
-                        value: '${_getPelanggaranBulanIni(data)}',
-                        label: 'Bulan Ini',
-                      ),
-                      const SizedBox(height: 12),
-                      _buildDesktopStatCard(
-                        icon: Icons.calendar_today_rounded,
-                        iconBg: const Color(0xFFFF6B6B),
-                        value: '${_getPelanggaranMingguIni(data)}',
-                        label: 'Minggu Ini',
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Filter Section dalam sidebar
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      // Date Range Picker
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[200]!),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.date_range_rounded, 
-                                     size: 20, color: Colors.grey[600]),
-                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue[50],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(Icons.assessment_rounded, 
+                                           color: Colors.blue[700], size: 24),
+                                ),
+                                const SizedBox(width: 12),
                                 Text(
-                                  'Rentang Tanggal',
+                                  'Total Pelanggaran',
                                   style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.grey[700],
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  final DateTimeRange? picked = 
-                                    await showDateRangePicker(
-                                      context: context,
-                                      firstDate: DateTime(2020),
-                                      lastDate: DateTime.now(),
-                                      initialDateRange: selectedDateRange,
-                                    );
-                                  if (picked != null) {
-                                    _onDateRangeChanged(picked);
-                                  }
-                                },
-                                icon: const Icon(Icons.calendar_today_rounded, size: 16),
-                                label: Text(
-                                  selectedDateRange != null
-                                      ? '${DateFormat('dd MMM yyyy').format(selectedDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(selectedDateRange!.end)}'
-                                      : 'Pilih Tanggal',
+                            Text(
+                              '${filteredData.length}',
+                              style: TextStyle(
+                                color: Colors.blue[900],
+                                fontSize: 48,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -1,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Kasus tercatat',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // Stat Cards (Bulan Ini & Minggu Ini)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMiniStatCard(
+                              title: 'Bulan Ini',
+                              value: '${_getPelanggaranBulanIni(data)}',
+                              icon: Icons.calendar_month_rounded,
+                              color: Colors.amber[700]!,
+                              bgColor: Colors.amber[50]!,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildMiniStatCard(
+                              title: 'Minggu Ini',
+                              value: '${_getPelanggaranMingguIni(data)}',
+                              icon: Icons.calendar_today_rounded,
+                              color: Colors.red[600]!,
+                              bgColor: Colors.red[50]!,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Weekly Trend Chart Section
+                Container(
+                  width: double.infinity,
+                  color: Colors.blue[50]?.withOpacity(0.3),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.show_chart_rounded, size: 20, color: Colors.grey[800]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Tren Mingguan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        height: 180,
+                        decoration: BoxDecoration(
+                           color: Colors.white,
+                           borderRadius: BorderRadius.circular(16),
+                           border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: WeeklyTrendChart(data: data),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Filter Section within sidebar
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Filter Data',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Date Range Picker
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey[200]!),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            InkWell(
+                              onTap: () async {
+                                final DateTimeRange? picked = 
+                                  await showDateRangePicker(
+                                    context: context,
+                                    firstDate: DateTime(2020),
+                                    lastDate: DateTime(2100),
+                                    initialDateRange: selectedDateRange,
+                                    builder: (context, child) {
+                                      return Theme(
+                                        data: Theme.of(context).copyWith(
+                                          colorScheme: ColorScheme.light(
+                                            primary: const Color(0xFF2563EB),
+                                            onPrimary: Colors.white,
+                                            onSurface: Colors.grey[900]!,
+                                          ),
+                                        ),
+                                        child: child!,
+                                      );
+                                    },
+                                  );
+                                if (picked != null) {
+                                  _onDateRangeChanged(picked);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey[300]!),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.calendar_today_rounded, 
+                                         size: 18, color: Colors.grey[600]),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        selectedDateRange != null
+                                            ? '${DateFormat('dd MMM').format(selectedDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(selectedDateRange!.end)}'
+                                            : 'Pilih Rentang Tanggal',
+                                        style: TextStyle(
+                                          color: selectedDateRange != null 
+                                            ? Colors.grey[900] 
+                                            : Colors.grey[500],
+                                          fontWeight: FontWeight.w500,
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
+                            
                             if (selectedDateRange != null) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 12),
                               SizedBox(
                                 width: double.infinity,
                                 child: TextButton.icon(
                                   onPressed: _resetFilter,
                                   icon: const Icon(Icons.refresh_rounded, size: 16),
-                                  label: Text('Reset Filter'),
+                                  label: const Text('Reset Filter'),
                                   style: TextButton.styleFrom(
                                     foregroundColor: Colors.grey[600],
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -452,45 +661,26 @@ class _RiwayatPageState extends State<RiwayatPage> {
                         ),
                       ),
                       
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
                       
-                      // Action Buttons
-                      Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _showInputDialog,
-                              icon: const Icon(Icons.add_circle_rounded),
-                              label: Text('Input Pelanggaran'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF10B981),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
+                      // Secondary Action Button (Rekap Anggota)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _showRekapAnggotaDialog,
+                          icon: const Icon(Icons.people_alt_rounded, size: 20),
+                          label: const Text('Rekap Anggota Lengkap'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF2563EB),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
+                            side: const BorderSide(color: Color(0xFF2563EB)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _showRekapAnggotaDialog,
-                              icon: const Icon(Icons.people_alt_rounded),
-                              label: Text('Rekap Anggota'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3B82F6),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
@@ -503,51 +693,53 @@ class _RiwayatPageState extends State<RiwayatPage> {
     );
   }
 
-  Widget _buildDesktopStatCard({
-    required IconData icon,
-    required Color iconBg,
+  Widget _buildMiniStatCard({
+    required String title,
     required String value,
-    required String label,
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(12),
+              color: bgColor,
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Colors.white, size: 20),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.95),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[900],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[500],
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -555,19 +747,40 @@ class _RiwayatPageState extends State<RiwayatPage> {
     );
   }
 
+
+
   Widget _buildDesktopSemuaPelanggaranPage() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: pelanggaranFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    return Consumer<ViolationProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
           return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        } else if (provider.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off_rounded, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                const Text(
+                  'Koneksi Gagal',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                ),
+                const SizedBox(height: 8),
+                Text(provider.error!, style: TextStyle(color: Colors.grey[500])),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => provider.fetchViolations(),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Coba Lagi'),
+                ),
+              ],
+            ),
+          );
+        } else if (provider.violations.isEmpty) {
           return const Center(child: Text('Data pelanggaran kosong'));
         }
 
-        final filteredData = _filterByDateRange(snapshot.data!);
+        final filteredData = _applyFilters(provider.violations);
         filteredData.sort((a, b) => (b['id'] ?? 0).compareTo(a['id'] ?? 0));
         
         return Padding(
@@ -636,18 +849,37 @@ class _RiwayatPageState extends State<RiwayatPage> {
   }
 
   Widget _buildDesktopRekapPage() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: pelanggaranFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    return Consumer<ViolationProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
           return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        } else if (provider.error != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off_rounded, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                const Text(
+                  'Koneksi Gagal',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                ),
+                const SizedBox(height: 8),
+                Text(provider.error!, style: TextStyle(color: Colors.grey[500])),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => provider.fetchViolations(),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Coba Lagi'),
+                ),
+              ],
+            ),
+          );
+        } else if (provider.violations.isEmpty) {
           return const Center(child: Text('Data rekap kosong'));
         }
 
-        final filteredData = _filterByDateRange(snapshot.data!);
+        final filteredData = _applyFilters(provider.violations);
         final Map<String, Map<String, int>> rekapKelas = {};
         
         for (var item in filteredData) {
@@ -848,121 +1080,562 @@ class _RiwayatPageState extends State<RiwayatPage> {
   }
 
   Widget _buildMobileLayout() {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showInputDialog,
-        backgroundColor: const Color(0xFF2563EB),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Input Pelanggaran'),
-        elevation: 4,
-        highlightElevation: 8,
-      ),
-      body: Column(
-        children: [
-          // Custom Header for Mobile
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return Consumer<ViolationProvider>(
+      builder: (context, provider, child) {
+        if (provider.error != null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF1F5F9),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)],
+                    ),
+                    child: Icon(Icons.wifi_off_rounded, size: 64, color: Colors.blue[300]),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Koneksi Terputus',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1E3A8A)),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    provider.error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5),
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    onPressed: () => provider.fetchViolations(),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Coba Lagi'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x332563EB),
-                  blurRadius: 24,
-                  offset: Offset(0, 8),
-                ),
-              ],
             ),
-            child: SafeArea( // Added SafeArea
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24), // Adjusted padding
-                child: Column(
-                  children: [
-                    Stack( // Changed to Stack for proper centering and back button placement
-                      alignment: Alignment.center,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          );
+        }
+
+        final isLoading = provider.isLoading;
+        final data = provider.violations;
+        final filteredData = _applyFilters(data);
+        
+        // Perhitungan Statistik Real-time
+        final totalPelanggaran = filteredData.length;
+        final bulanIni = _getPelanggaranBulanIni(data);
+        final mingguIni = _getPelanggaranMingguIni(data);
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF1F5F9), // Slate 100
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _showInputDialog,
+            backgroundColor: const Color(0xFF2563EB),
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text('Input', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          body: RefreshIndicator(
+            onRefresh: _refreshData,
+            child: NestedScrollView(
+              headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+              return <Widget>[
+                SliverAppBar(
+                  expandedHeight: 300.0,
+                  floating: false,
+                  pinned: true,
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  elevation: 0,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+                  ),
+                  leading: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded, 
+                               color: Colors.white, size: 18),
+                    ),
+                  ),
+                  title: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 300),
+                    opacity: innerBoxIsScrolled ? 1.0 : 0.0,
+                    child: const Text(
+                      'Rekap Pelanggaran',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                  flexibleSpace: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+                    child: FlexibleSpaceBar(
+                      collapseMode: CollapseMode.parallax,
+                      background: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        padding: EdgeInsets.only(
+                          top: MediaQuery.of(context).padding.top + 50,
+                          bottom: 20,
+                          left: 20,
+                          right: 20,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            GestureDetector( // Improved touch target
-                              onTap: () => Navigator.pop(context),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                color: Colors.transparent, // Hit test for transparent area
-                                child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                            const Text(
+                              'Total Kasus Tercatat',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(width: 40), // Spacer equivalent
+                            const SizedBox(height: 8),
+                            Text(
+                              isLoading ? '-' : '$totalPelanggaran',
+                              style: const TextStyle(
+                                fontSize: 64,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                height: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            Row(
+                              children: [
+                                Expanded(child: _buildHeaderStatItem(
+                                  'Bulan Ini', 
+                                  isLoading ? '-' : '$bulanIni', 
+                                  Icons.calendar_month_rounded,
+                                  const Color(0xFF60A5FA)
+                                )),
+                                const SizedBox(width: 16),
+                                Expanded(child: _buildHeaderStatItem(
+                                  'Minggu Ini', 
+                                  isLoading ? '-' : '$mingguIni', 
+                                  Icons.access_time_filled_rounded,
+                                  const Color(0xFFFACC15)
+                                )),
+                              ],
+                            ),
                           ],
                         ),
-                        const Text(
-                          'Rekap Pelanggaran',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ];
+            },
+            body: Column(
+              children: [
+                const SizedBox(height: 16),
+                // Filter Tabs & Date Picker Row (Sticky-like behavior in UI flow)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      // Date Filter Button
+                      InkWell(
+                        onTap: () async {
+                          final DateTimeRange? picked = await showDateRangePicker(
+                            context: context,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                            initialDateRange: selectedDateRange,
+                            builder: (context, child) {
+                              return Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: ColorScheme.light(
+                                    primary: const Color(0xFF2563EB),
+                                    onPrimary: Colors.white,
+                                    onSurface: Colors.grey[900]!,
+                                  ),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (picked != null) {
+                            _onDateRangeChanged(picked);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
                             color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                            border: selectedDateRange != null 
+                                ? Border.all(color: const Color(0xFF2563EB), width: 1.5)
+                                : null,
+                          ),
+                          child: Icon(
+                            Icons.calendar_month_rounded,
+                            color: selectedDateRange != null ? const Color(0xFF2563EB) : Colors.grey[600],
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Navigation Tabs
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              _buildTabItem('Semua', activeFilter == 'Semua'),
+                              _buildTabItem('Rekap', activeFilter == 'Rekap'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (selectedDateRange != null) ...[
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: _resetFilter,
+                          borderRadius: BorderRadius.circular(14),
+                           child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red[50],
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.red[200]!),
+                            ),
+                            child: Icon(
+                              Icons.close_rounded,
+                              color: Colors.red[600],
+                              size: 20,
+                            ),
                           ),
                         ),
                       ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          FilterTabs(
-            activeFilter: activeFilter,
-            onFilterChanged: _onFilterChanged,
-          ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              children: [
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: pelanggaranFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Center(child: Text('Data pelanggaran kosong'));
-                    }
-
-                    final filteredData = _filterByDateRange(snapshot.data!);
-                    // Sort descending by ID so new items appear top
-                    filteredData.sort((a, b) => (b['id'] ?? 0).compareTo(a['id'] ?? 0));
-                    return _buildSemuaPelanggaranPage(filteredData);
-                  },
-                ),
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: pelanggaranFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Center(child: Text('Data rekap kosong'));
-                    }
-
-                    final filteredData = _filterByDateRange(snapshot.data!);
-                    return _buildRekapPage(filteredData);
-                  },
+                
+                const SizedBox(height: 16),
+                
+                // Content
+                Expanded(
+                  child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : PageView(
+                        controller: _pageController,
+                        onPageChanged: _onPageChanged,
+                        children: [
+                          filteredData.isEmpty 
+                              ? _buildEmptyState('Belum ada data', 'Coba ubah filter tanggal') 
+                              : _buildSemuaPelanggaranPage(filteredData),
+                          
+                          // Halaman Rekap (Group by Class)
+                          _buildRekapPageKelas(data),
+                        ],
+                      ),
                 ),
               ],
             ),
           ),
+        ),
+        );
+      }
+    );
+  }
+
+  // Improved Rekap Page (Group by Kelas)
+  Widget _buildRekapPageKelas(List<Map<String, dynamic>> data) {
+    // Filter data if date range is selected
+    final listToProcess = _applyFilters(data);
+
+    if (listToProcess.isEmpty) {
+       // Jika kosong karena filter hari ini, tampilkan pesan yang sesuai
+       if (selectedDateRange == null) {
+         return _buildEmptyState('Belum ada data hari ini', 'Gunakan filter tanggal untuk melihat rekap');
+       }
+       return _buildEmptyState('Tidak ada data', 'Pada rentang tanggal ini');
+    }
+
+    // Grouping Data by Class
+    final Map<String, Map<String, dynamic>> rekapKelas = {};
+    
+    for (var item in listToProcess) {
+      final kelas = item['kelas'] ?? 'Tanpa Kelas';
+      final nama = item['nama'] ?? 'Tanpa Nama';
+      final poin = int.tryParse(item['poin'].toString()) ?? 0;
+      
+      if (!rekapKelas.containsKey(kelas)) {
+        rekapKelas[kelas] = {
+           'kelas': kelas,
+           'total_poin': 0,
+           'total_kasus': 0,
+           'siswa': <String, Map<String, dynamic>>{} // Map of student name -> stats
+        };
+      }
+      
+      rekapKelas[kelas]!['total_poin'] += poin;
+      rekapKelas[kelas]!['total_kasus'] += 1;
+      
+      // Update data siswa dalam kelas tersebut
+      var siswaMap = rekapKelas[kelas]!['siswa'] as Map<String, Map<String, dynamic>>;
+      if (!siswaMap.containsKey(nama)) {
+         siswaMap[nama] = {'nama': nama, 'poin': 0, 'kasus': 0};
+      }
+      siswaMap[nama]!['poin'] += poin;
+      siswaMap[nama]!['kasus'] += 1;
+    }
+    
+    // Sort kelas berdasarkan total poin tertinggi
+    final sortedKelas = rekapKelas.values.toList()
+      ..sort((a, b) => b['total_poin'].compareTo(a['total_poin']));
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 0, bottom: 80, left: 24, right: 24),
+      itemCount: sortedKelas.length,
+      itemBuilder: (context, index) {
+        final dataKelas = sortedKelas[index];
+        final totalPoinKelas = dataKelas['total_poin'] as int;
+        
+        // Convert map siswa to list and sort
+        final Map<String, Map<String, dynamic>> siswaMap = dataKelas['siswa'];
+        final List<Map<String, dynamic>> sortedSiswa = siswaMap.values.toList()
+           ..sort((a, b) => b['poin'].compareTo(a['poin']));
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              childrenPadding: const EdgeInsets.only(bottom: 16),
+              leading: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  dataKelas['kelas'],
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[800],
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              title: Text(
+                '${dataKelas['total_kasus']} Pelanggaran',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              subtitle: Text(
+                'Total Poin: $totalPoinKelas',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[500],
+                ),
+              ),
+              children: sortedSiswa.map((siswa) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: (siswa['poin'] >= 50) ? Colors.red : Colors.blue[300],
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          siswa['nama'],
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[800],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${siswa['poin']} Poin',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTabItem(String title, bool isActive) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onFilterChanged(title),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF2563EB) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isActive ? Colors.white : Colors.grey[600],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderStatItem(String label, String value, IconData icon, Color iconColor) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white.withOpacity(0.8),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String title, String subtitle) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.search_off_rounded, size: 48, color: Colors.blue[300]),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[800],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -974,13 +1647,6 @@ class _RiwayatPageState extends State<RiwayatPage> {
       return CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: HeaderSummary(
-              totalPelanggaran: data.length,
-              pelanggaranBulanIni: data.length, // Logic can be improved
-              pelanggaranMingguIni: data.length, // Logic can be improved
-            ),
-          ),
-          SliverToBoxAdapter(
             child: FilterSection(
               selectedDateRange: selectedDateRange,
               onRekapPressed: _showRekapAnggotaDialog,
@@ -990,33 +1656,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
             ),
           ),
           SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tidak ada data pelanggaran',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    selectedDateRange != null
-                        ? 'pada rentang tanggal yang dipilih'
-                        : 'pada hari ini',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            child: _buildEmptyState('Tidak ada data', 'Silakan ubah filter atau input baru'),
           )
         ],
       );
@@ -1029,19 +1669,15 @@ class _RiwayatPageState extends State<RiwayatPage> {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: HeaderSummary(
-            totalPelanggaran: data.length,
-            pelanggaranBulanIni: data.length, // You might want real counts here
-            pelanggaranMingguIni: data.length, // You might want real counts here
-          ),
-        ),
-        SliverToBoxAdapter(
-          child: FilterSection(
-            selectedDateRange: selectedDateRange,
-            onRekapPressed: _showRekapAnggotaDialog,
-            onInputPressed: _showInputDialog,
-            onResetFilter: _resetFilter,
-            onDateRangeChanged: _onDateRangeChanged,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: FilterSection(
+              selectedDateRange: selectedDateRange,
+              onRekapPressed: _showRekapAnggotaDialog,
+              onInputPressed: _showInputDialog,
+              onResetFilter: _resetFilter,
+              onDateRangeChanged: _onDateRangeChanged,
+            ),
           ),
         ),
         const SliverPadding(padding: EdgeInsets.only(top: 8)),
@@ -1058,11 +1694,22 @@ class _RiwayatPageState extends State<RiwayatPage> {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final item = data[index];
+                      String displayDate = item['tanggal']?.toString() ?? '-';
+                      // Jika tanggal tidak punya info jam, coba ambil dari created_at
+                      if (!displayDate.contains(' ') && !displayDate.contains('T') && item['created_at'] != null) {
+                        displayDate = item['created_at'].toString();
+                      }
+                      
+                      // Coba ambil waktu dari berbagai kemungkinan key
+                      String infoWaktu = item['waktu']?.toString() ?? 
+                                         item['jam']?.toString() ?? 
+                                         item['time']?.toString() ?? '-';
+
                       return PelanggaranCard(
                         nama: item['nama'] ?? '-',
                         kelas: item['kelas'] ?? '-',
-                        tanggal: item['tanggal'] ?? '-',
-                        waktu: item['waktu'] ?? '-',
+                        tanggal: displayDate,
+                        waktu: infoWaktu,
                         jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
                         poin: item['poin']?.toInt() ?? 0,
                         keterangan: item['keterangan'] ?? '-',
@@ -1077,13 +1724,24 @@ class _RiwayatPageState extends State<RiwayatPage> {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final item = data[index];
+                      String displayDate = item['tanggal']?.toString() ?? '-';
+                      // Jika tanggal tidak punya info jam, coba ambil dari created_at
+                      if (!displayDate.contains(' ') && !displayDate.contains('T') && item['created_at'] != null) {
+                        displayDate = item['created_at'].toString();
+                      }
+
+                      // Coba ambil waktu dari berbagai kemungkinan key
+                      String infoWaktu = item['waktu']?.toString() ?? 
+                                         item['jam']?.toString() ?? 
+                                         item['time']?.toString() ?? '-';
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: PelanggaranCard(
                           nama: item['nama'] ?? '-',
                           kelas: item['kelas'] ?? '-',
-                          tanggal: item['tanggal'] ?? '-',
-                          waktu: item['waktu'] ?? '-',
+                          tanggal: displayDate,
+                          waktu: infoWaktu,
                           jenisPelanggaran: item['jenis_pelanggaran'] ?? '-',
                           poin: item['poin']?.toInt() ?? 0,
                           keterangan: item['keterangan'] ?? '-',

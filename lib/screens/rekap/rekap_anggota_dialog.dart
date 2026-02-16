@@ -46,48 +46,52 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
       ),
-      elevation: 8,
+      elevation: 0,
       backgroundColor: Colors.transparent,
       child: Container(
         constraints: const BoxConstraints(
-          maxHeight: 700,
+          maxHeight: 750,
           maxWidth: 600,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF64748B).withOpacity(0.2), // Slate 500
+              blurRadius: 40,
+              offset: const Offset(0, 20),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header dengan Gradient
+            // Premium Header
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.blue.shade600, Colors.blue.shade800],
+                  colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)], // Blue 900 -> Blue 600
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: const BorderRadius.only(
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(24),
                   topRight: Radius.circular(24),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 1.5,
+                      ),
                     ),
                     child: const Icon(
                       Icons.people_alt_rounded,
@@ -95,7 +99,7 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
                       size: 28,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 18),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,214 +109,189 @@ class _RekapAnggotaDialogState extends State<RekapAnggotaDialog> {
                           'Rekap Anggota',
                           style: TextStyle(
                             fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             color: Colors.white,
-                            letterSpacing: 0.3,
+                            letterSpacing: -0.5,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '${_rekap.length} Total Siswa',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${_rekap.length} Total Siswa',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withOpacity(0.95),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
-                      tooltip: 'Tutup',
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Container(
                       padding: const EdgeInsets.all(8),
-                      constraints: const BoxConstraints(),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
                     ),
+                    tooltip: 'Tutup',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
             ),
 
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-              child: TextField(
-                onChanged: (value) {
-                  setState(() {
-                    searchQuery = value;
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: 'Cari nama atau kelas...',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
-                  prefixIcon: Icon(Icons.search_rounded, color: Colors.grey[600], size: 24),
-                  suffixIcon: searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear_rounded, color: Colors.grey[600], size: 20),
-                          onPressed: () {
-                            setState(() {
-                              searchQuery = '';
-                            });
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+            // Search Bar Area
+            Container(
+              color: const Color(0xFFF8FAFC), // Slate 50
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Column(
+                children: [
+                  TextField(
+                    onChanged: (value) {
+                      setState(() {
+                        searchQuery = value;
+                      });
+                    },
+                    style: const TextStyle(
+                      color: Color(0xFF1E293B), // Slate 800
+                      fontWeight: FontWeight.w500,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Cari nama atau kelas...',
+                      hintStyle: const TextStyle(color: Color(0xFF94A3B8)), // Slate 400
+                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 24), // Slate 500
+                      suffixIcon: searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, color: Color(0xFF64748B), size: 20),
+                              onPressed: () {
+                                setState(() {
+                                  searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: const Color(0xFFE2E8F0), width: 1.5), // Slate 200
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2), // Blue 500
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 18,
+                      ),
+                    ),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                ),
+                  if (searchQuery.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Row(
+                        children: [
+                          Icon(Icons.filter_list_rounded, size: 16, color: Colors.blue[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Ditemukan ${filtered.length} hasil pencarian',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue[700],
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
-
-            // Info Bar (jumlah hasil pencarian)
-            if (searchQuery.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.shade200),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.filter_list_rounded, size: 18, color: Colors.blue.shade700),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          'Ditemukan ${filtered.length} hasil',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.blue.shade700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            
-            const SizedBox(height: 12),
 
             // List Anggota
             Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : filtered.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  shape: BoxShape.circle,
+              child: Container(
+                color: const Color(0xFFF8FAFC), // Slate 50
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : filtered.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(28),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    searchQuery.isEmpty ? Icons.people_outline : Icons.search_off_rounded,
+                                    size: 56,
+                                    color: const Color(0xFFCBD5E1), // Slate 300
+                                  ),
                                 ),
-                                child: Icon(
-                                  searchQuery.isEmpty ? Icons.people_outline : Icons.search_off_rounded,
-                                  size: 64,
-                                  color: Colors.grey.shade400,
+                                const SizedBox(height: 24),
+                                Text(
+                                  searchQuery.isEmpty ? "Tidak ada data" : "Tidak ditemukan",
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    color: Color(0xFF64748B), // Slate 500
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                searchQuery.isEmpty ? "Tidak ada data" : "Tidak ditemukan",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey.shade700,
-                                  fontWeight: FontWeight.w600,
+                                const SizedBox(height: 8),
+                                Text(
+                                  searchQuery.isEmpty
+                                      ? "Belum ada siswa terdaftar"
+                                      : "Coba gunakan kata kunci lain",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF94A3B8), // Slate 400
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                searchQuery.isEmpty
-                                    ? "Belum ada siswa terdaftar"
-                                    : "Coba kata kunci lain",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final item = filtered[index];
+                              return AnggotaItem(
+                                nama: item["nama"],
+                                kelas: item["kelas"],
+                                jumlahPelanggaran: item["jumlah"],
+                                totalPoin: item["poin"],
+                              );
+                            },
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                            final item = filtered[index];
-                            return AnggotaItem(
-                              nama: item["nama"],
-                              kelas: item["kelas"],
-                              jumlahPelanggaran: item["jumlah"],
-                              totalPoin: item["poin"],
-                            );
-                          },
-                        ),
-            ),
-
-            // Footer dengan info tambahan
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                border: Border(
-                  top: BorderSide(color: Colors.grey.shade200, width: 1),
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.info_outline_rounded, size: 16, color: Colors.grey.shade600),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      'Data diperbarui secara real-time',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
               ),
             ),
           ],

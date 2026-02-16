@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/member_provider.dart';
 import '../services/api_service.dart';
+import '../models/member_model.dart';
 import '../pages/member_detail_page.dart';
 import '../widgets/stat_header_widget.dart';
 import '../widgets/member_item_widget.dart';
@@ -17,14 +20,16 @@ class MembersScreen extends StatefulWidget {
 }
 
 class _MembersScreenState extends State<MembersScreen> {
-  late Future<List<Map<String, dynamic>>> _membersFuture;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _membersFuture = ApiService.getMembers();
+    // Fetch members on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MemberProvider>().fetchMembers();
+    });
   }
 
   @override
@@ -44,28 +49,25 @@ class _MembersScreenState extends State<MembersScreen> {
 
   // Method untuk reload data members
   void _reloadMembers() {
-    if (!mounted) return;
-    setState(() {
-      _membersFuture = ApiService.getMembers();
-    });
+    context.read<MemberProvider>().fetchMembers(refresh: true);
   }
 
   // Method untuk filter dan sort members
-  List<Map<String, dynamic>> _filterAndSortMembers(List<Map<String, dynamic>> members) {
+  List<Member> _filterAndSortMembers(List<Member> members) {
     // Filter berdasarkan search query
-    List<Map<String, dynamic>> filtered = members;
+    List<Member> filtered = members;
     
     if (_searchQuery.isNotEmpty) {
       filtered = members.where((member) {
-        final name = (member['name'] ?? '').toString().toLowerCase();
+        final name = member.nama.toLowerCase();
         return name.contains(_searchQuery.toLowerCase());
       }).toList();
     }
 
     // Sort A-Z berdasarkan nama
     filtered.sort((a, b) {
-      final nameA = (a['name'] ?? '').toString().toLowerCase();
-      final nameB = (b['name'] ?? '').toString().toLowerCase();
+      final nameA = a.nama.toLowerCase();
+      final nameB = b.nama.toLowerCase();
       return nameA.compareTo(nameB);
     });
 
@@ -105,25 +107,24 @@ class _MembersScreenState extends State<MembersScreen> {
         ),
       );
 
-      // Ambil data members
-      final members = await _membersFuture;
+      // Ambil data members dari provider
+      final members = context.read<MemberProvider>().members;
       
       // Sort members A-Z untuk PDF
-      final sortedMembers = List<Map<String, dynamic>>.from(members);
+      final sortedMembers = List<Member>.from(members);
       sortedMembers.sort((a, b) {
-        final nameA = (a['name'] ?? '').toString().toLowerCase();
-        final nameB = (b['name'] ?? '').toString().toLowerCase();
+        final nameA = a.nama.toLowerCase();
+        final nameB = b.nama.toLowerCase();
         return nameA.compareTo(nameB);
       });
 
       // Hitung statistik
       int totalAnggota = sortedMembers.length;
-      int sudahBayar = sortedMembers.where((m) => (m['amount'] ?? 0) > 0).length;
+      int sudahBayar = sortedMembers.where((m) => (m.totalPaid ?? 0) > 0).length;
       int belumBayar = totalAnggota - sudahBayar;
-      int totalKas = sortedMembers.fold<int>(0, (sum, m) {
-        final amount = m['amount'];
-        final amountInt = (amount is int) ? amount : (amount is double ? amount.toInt() : 0);
-        return sum + amountInt;
+      double totalKas = sortedMembers.fold<double>(0, (sum, m) {
+        final amount = m.totalPaid;
+        return sum + amount;
       });
 
       final pdf = pw.Document();
@@ -279,7 +280,7 @@ class _MembersScreenState extends State<MembersScreen> {
                   ...sortedMembers.asMap().entries.map((entry) {
                     final index = entry.key;
                     final member = entry.value;
-                    final int totalPaid = member['amount'] ?? 0;
+                    final double totalPaid = member.totalPaid;
                     final status = totalPaid > 0 ? 'Sudah Bayar' : 'Belum Bayar';
                     final statusColor = totalPaid > 0 ? PdfColors.green700 : PdfColors.red700;
 
@@ -289,7 +290,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       ),
                       children: [
                         _buildTableCell((index + 1).toString()),
-                        _buildTableCell(member['name'] ?? 'Tidak Diketahui', align: pw.TextAlign.left),
+                        _buildTableCell(member.nama, align: pw.TextAlign.left),
                         _buildTableCell('Rp ${NumberFormat('#,###', 'id_ID').format(totalPaid)}', align: pw.TextAlign.right),
                         _buildTableCellColored(status, statusColor),
                       ],
@@ -787,11 +788,13 @@ class _MembersScreenState extends State<MembersScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.blue[100]!),
                         ),
-                        child: FutureBuilder<List<Map<String, dynamic>>>(
-                          future: _membersFuture,
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) return const SizedBox.shrink();
-                            final filtered = _filterAndSortMembers(snapshot.data!);
+                        child: Consumer<MemberProvider>(
+                          builder: (context, provider, child) {
+                            // Tampilkan data jika ada, meskipun sedang loading
+                            if (provider.members.isEmpty && provider.isLoading) {
+                              return const SizedBox.shrink(); 
+                            }
+                            final filtered = _filterAndSortMembers(provider.members);
                             return Row(
                               children: [
                                 Icon(
@@ -819,10 +822,9 @@ class _MembersScreenState extends State<MembersScreen> {
 
                 // Content Area dengan Grid
                 Expanded(
-                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _membersFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
+                  child: Consumer<MemberProvider>(
+                    builder: (context, provider, child) {
+                      if (provider.isLoading && provider.members.isEmpty) {
                         return Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -842,11 +844,11 @@ class _MembersScreenState extends State<MembersScreen> {
                             ],
                           ),
                         );
-                      } else if (snapshot.hasError) {
+                      } else if (provider.error != null && provider.members.isEmpty) {
                         return Center(
                           child: Container(
                             margin: const EdgeInsets.all(32),
-                            padding: const EdgeInsets.all(32),
+                            padding: const EdgeInsets.all(48),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
@@ -861,30 +863,46 @@ class _MembersScreenState extends State<MembersScreen> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.error_outline_rounded, 
-                                  size: 64, 
-                                  color: Colors.red[400]
+                                Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[50],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.wifi_off_rounded, size: 64, color: Colors.red[300]),
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 24),
                                 Text(
-                                  'Gagal Memuat Data',
+                                  'Koneksi Gagal',
                                   style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF1E293B),
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 12),
                                 Text(
-                                  '${snapshot.error}',
+                                  'Gagal sinkronisasi: ${provider.error}\nCek koneksi internet Anda.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey[600]),
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5),
+                                ),
+                                const SizedBox(height: 32),
+                                ElevatedButton.icon(
+                                  onPressed: _reloadMembers,
+                                  icon: const Icon(Icons.refresh_rounded),
+                                  label: const Text('Coba Lagi'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[700],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         );
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      } else if (provider.members.isEmpty) {
                         return Center(
                           child: Container(
                             margin: const EdgeInsets.all(32),
@@ -953,9 +971,9 @@ class _MembersScreenState extends State<MembersScreen> {
                           ),
                         );
                       }
-
-                      final filteredMembers = _filterAndSortMembers(snapshot.data!);
-
+ 
+                      final filteredMembers = _filterAndSortMembers(provider.members);
+ 
                       if (filteredMembers.isEmpty) {
                         return Center(
                           child: Container(
@@ -1005,7 +1023,7 @@ class _MembersScreenState extends State<MembersScreen> {
                         itemCount: filteredMembers.length,
                         itemBuilder: (context, index) {
                           final member = filteredMembers[index];
-                          final int totalPaid = member['amount'] ?? 0;
+                          final double totalPaid = member.totalPaid;
                           final status = totalPaid > 0 ? 'Sudah Bayar' : 'Belum Bayar';
 
                           return InkWell(
@@ -1014,8 +1032,8 @@ class _MembersScreenState extends State<MembersScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => MemberDetailPage(
-                                    memberId: member['id'],
-                                    memberName: member['name'],
+                                    memberId: member.id,
+                                    memberName: member.nama,
                                   ),
                                 ),
                               ).then((_) => _reloadMembers());
@@ -1064,8 +1082,8 @@ class _MembersScreenState extends State<MembersScreen> {
                                     ),
                                     child: Center(
                                       child: Text(
-                                        (member['name'] != null && member['name'].isNotEmpty)
-                                          ? member['name'][0].toUpperCase()
+                                        (member.nama != null && member.nama.isNotEmpty)
+                                          ? member.nama[0].toUpperCase()
                                           : '?',
                                         style: const TextStyle(
                                           color: Colors.white,
@@ -1082,7 +1100,7 @@ class _MembersScreenState extends State<MembersScreen> {
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          member['name'] ?? 'Tidak Diketahui',
+                                          member.nama ?? 'Tidak Diketahui',
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
@@ -1223,26 +1241,6 @@ class _MembersScreenState extends State<MembersScreen> {
                               onPressed: _generateRekapKasPDF,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          // Add Member Button
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.person_add_rounded, color: Colors.white),
-                              tooltip: 'Tambah Anggota',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => AddMemberPage()),
-                                ).then((result) {
-                                  if (result == true && mounted) _reloadMembers();
-                                });
-                              },
-                            ),
-                          ),
                         ],
                       ),
                     ],
@@ -1308,10 +1306,9 @@ class _MembersScreenState extends State<MembersScreen> {
         Expanded(
           child: Container(
             color: const Color(0xFFF8FAFC), // Match background
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _membersFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+            child: Consumer<MemberProvider>(
+              builder: (context, provider, child) {
+                if (provider.isLoading && provider.members.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1332,11 +1329,11 @@ class _MembersScreenState extends State<MembersScreen> {
                       ],
                     ),
                   );
-                } else if (snapshot.hasError) {
+                } else if (provider.error != null && provider.members.isEmpty) {
                   return Center(
                     child: Container(
                       margin: const EdgeInsets.all(24),
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(32),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
@@ -1352,20 +1349,20 @@ class _MembersScreenState extends State<MembersScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: Colors.red[50],
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              Icons.error_outline_rounded,
+                              Icons.wifi_off_rounded,
                               size: 48,
-                              color: Colors.red[600],
+                              color: Colors.red[400],
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                           Text(
-                            'Gagal Memuat Data',
+                            'Koneksi Terputus',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -1373,19 +1370,34 @@ class _MembersScreenState extends State<MembersScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            '${snapshot.error}',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 13,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Gagal sinkronisasi: ${provider.error}',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 13,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _reloadMembers,
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            label: const Text('Coba Lagi'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue[700],
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                           ),
                         ],
                       ),
                     ),
                   );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                } else if (provider.members.isEmpty) {
                   return Center(
                     child: Container(
                       margin: const EdgeInsets.all(24),
@@ -1433,6 +1445,30 @@ class _MembersScreenState extends State<MembersScreen> {
                               fontSize: 13,
                             ),
                           ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => AddMemberPage()),
+                              ).then((result) {
+                                if (result == true && mounted) _reloadMembers();
+                              });
+                            },
+                            icon: const Icon(Icons.person_add_rounded),
+                            label: const Text('Tambah Anggota'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue[700],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1440,7 +1476,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 }
 
                 // Filter dan sort members
-                final filteredMembers = _filterAndSortMembers(snapshot.data!);
+                final filteredMembers = _filterAndSortMembers(provider.members);
 
                 // Tampilkan pesan jika tidak ada hasil pencarian
                 if (filteredMembers.isEmpty) {
@@ -1490,7 +1526,7 @@ class _MembersScreenState extends State<MembersScreen> {
                   separatorBuilder: (_, __) => SizedBox(height: isTablet ? 16 : 12),
                   itemBuilder: (context, index) {
                     final member = filteredMembers[index];
-                    final int totalPaid = member['amount'] ?? 0;
+                    final double totalPaid = member.totalPaid;
                     final status = totalPaid > 0 ? 'Sudah Bayar' : 'Belum Bayar';
 
                     return InkWell(
@@ -1499,8 +1535,8 @@ class _MembersScreenState extends State<MembersScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => MemberDetailPage(
-                              memberId: member['id'],
-                              memberName: member['name'],
+                              memberId: member.id,
+                              memberName: member.nama,
                             ),
                           ),
                         ).then((_) => _reloadMembers());
@@ -1549,8 +1585,8 @@ class _MembersScreenState extends State<MembersScreen> {
                               ),
                               child: Center(
                                 child: Text(
-                                  (member['name'] != null && member['name'].isNotEmpty)
-                                    ? member['name'][0].toUpperCase()
+                                  (member.nama != null && member.nama.isNotEmpty)
+                                    ? member.nama[0].toUpperCase()
                                     : '?',
                                   style: TextStyle(
                                     color: Colors.white,
@@ -1566,7 +1602,7 @@ class _MembersScreenState extends State<MembersScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    member['name'] ?? 'Tidak Diketahui',
+                                    member.nama ?? 'Tidak Diketahui',
                                     style: TextStyle(
                                       fontSize: isTablet ? 16 : 16,
                                       fontWeight: FontWeight.bold,

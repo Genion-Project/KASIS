@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../models/member_model.dart';
 
 class StatHeaderWidget extends StatelessWidget {
   const StatHeaderWidget({Key? key}) : super(key: key);
@@ -12,7 +13,7 @@ class StatHeaderWidget extends StatelessWidget {
 
     return Padding(
       padding: EdgeInsets.all(isDesktop ? 0 : 20),
-      child: FutureBuilder<List<Map<String, dynamic>>>(
+      child: FutureBuilder<List<Member>>(
         future: ApiService.getMembers(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -38,7 +39,7 @@ class StatHeaderWidget extends StatelessWidget {
 
             // Hitung total anggota dan status bayar
             final totalAnggota = members.length;
-            final sudahBayar = members.where((m) => (m['amount'] ?? 0) > 0).length;
+            final sudahBayar = members.where((m) => m.totalPaid > 0).length;
             final belumBayar = totalAnggota - sudahBayar;
 
             // Desktop: tampilan vertikal untuk sidebar (compact)

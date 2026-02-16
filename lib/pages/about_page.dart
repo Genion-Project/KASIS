@@ -1,298 +1,209 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   Future<void> _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $url');
+      debugPrint('Could not launch $url');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: Column(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          _buildSliverAppBar(context),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAnimatedSection(
+                    delay: 200,
+                    child: _buildDescriptionSection(),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildAnimatedSection(
+                    delay: 400,
+                    child: _buildFeaturesSection(),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildAnimatedSection(
+                    delay: 600,
+                    child: _buildDeveloperSection(),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildAnimatedSection(
+                    delay: 800,
+                    child: _buildContactSection(context),
+                  ),
+                  const SizedBox(height: 48),
+                  _buildFooter(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSliverAppBar(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 280.0,
+      floating: false,
+      pinned: true,
+      backgroundColor: const Color(0xFF1E40AF),
+      elevation: 0,
+      stretch: true,
+      leading: IconButton(
+        onPressed: () => Navigator.pop(context),
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        stretchModes: const [
+          StretchMode.zoomBackground,
+          StretchMode.blurBackground,
+        ],
+        background: Stack(
+          fit: StackFit.expand,
           children: [
-            // Header dengan gradient
+            // Background Gradient
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF1E3A8A),
-                    Color(0xFF2563EB),
-                    Color(0xFF3B82F6),
+                    Color(0xFF1E3A8A), // Blue 900
+                    Color(0xFF2563EB), // Blue 600
+                    Color(0xFF3B82F6), // Blue 500
                   ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: Offset(0, 10),
-                  ),
-                ],
               ),
+            ),
+            // Decorative Circles
+            Positioned(
+              top: -50,
+              right: -50,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.05),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -30,
+              left: -30,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.08),
+                ),
+              ),
+            ),
+            // Content
+            Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // AppBar
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 24, 24),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(Icons.arrow_back_rounded, color: Colors.white),
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Tentang Aplikasi',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                  const SizedBox(height: 40),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.2),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      size: 64,
+                      color: Colors.white,
+                    ),
                   ),
-
-                  // App Logo & Name
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(24, 0, 24, 32),
-                    child: Container(
-                      padding: EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 15,
-                            offset: Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // App Icon
-                          Container(
-                            padding: EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 15,
-                                  offset: Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.account_balance_wallet_rounded,
-                              size: 60,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                          SizedBox(height: 20),
-
-                          // App Name
-                          Text(
-                            'KASIS App',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-
-                          // Version
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              'Versi 1.0.0',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.95),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
+                  const SizedBox(height: 16),
+                  const Text(
+                    'KASIS App',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Versi 2.0.0',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ],
-              ),
-            ),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Deskripsi Aplikasi
-                    _buildSectionTitle('Tentang'),
-                    SizedBox(height: 16),
-                    _buildDescriptionCard(
-                      'KASIS App merupakan aplikasi manajemen sekolah serbaguna yang memudahkan pengelolaan data keuangan dan non-keuangan. Aplikasi ini dapat digunakan untuk mencatat pemasukan dan pengeluaran kas, mengelola data pelanggaran siswa, serta menyusun laporan dengan akurat dan efisien. Dengan antarmuka yang sederhana dan fitur yang fleksibel, Bendahara App membantu guru, bendahara, dan pihak sekolah dalam menjaga transparansi serta efektivitas administrasi sekolah.',
-                    ),
-
-                    SizedBox(height: 28),
-
-                    // Fitur Utama
-                    _buildSectionTitle('Fitur Utama'),
-                    SizedBox(height: 16),
-                    _buildFeatureItem(
-                      icon: Icons.add_circle_outline,
-                      title: 'Pencatatan Pemasukan',
-                      description: 'Catat semua transaksi pemasukan dengan mudah',
-                      color: Colors.green[600]!,
-                    ),
-                    SizedBox(height: 12),
-                    _buildFeatureItem(
-                      icon: Icons.remove_circle_outline,
-                      title: 'Pencatatan Pengeluaran',
-                      description: 'Kelola pengeluaran dengan sistematis',
-                      color: Colors.red[600]!,
-                    ),
-                    SizedBox(height: 12),
-                    _buildFeatureItem(
-                      icon: Icons.assessment_outlined,
-                      title: 'Laporan Keuangan',
-                      description: 'Lihat rekap dan laporan lengkap',
-                      color: Colors.blue[600]!,
-                    ),
-                    SizedBox(height: 12),
-                    _buildFeatureItem(
-                      icon: Icons.history_rounded,
-                      title: 'Riwayat Rekap Pelanggaran Siswa',
-                      description: 'Akses riwayat pelanggaran Siswa Kapan saja.',
-                      color: Colors.orange[600]!,
-                    ),
-
-                    SizedBox(height: 28),
-
-                    // Developer Info
-                    _buildSectionTitle('Developer'),
-                    SizedBox(height: 16),
-                    _buildInfoCard(
-                      icon: Icons.code_rounded,
-                      title: 'Dikembangkan oleh',
-                      subtitle: 'Genion Team',
-                      color: Colors.purple[600]!,
-                    ),
-                    SizedBox(height: 12),
-                    _buildInfoCard(
-                      icon: Icons.calendar_today_outlined,
-                      title: 'Tahun Rilis',
-                      subtitle: '2025',
-                      color: Colors.teal[600]!,
-                    ),
-
-                    SizedBox(height: 28),
-
-                    // Contact Section
-                    _buildSectionTitle('Hubungi Kami'),
-                    SizedBox(height: 16),
-                    _buildContactButton(
-                      icon: Icons.email_outlined,
-                      label: 'Email Support',
-                      subtitle: 'nuristefarpl@gmail.com',
-                      color: Colors.blue[600]!,
-                      onTap: () {
-                        _launchURL('mailto:support@bendaharaapp.com');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Email: nuristefarpl@gmail.com'),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(height: 12),
-                    _buildContactButton(
-                      icon: Icons.language_rounded,
-                      label: 'Website',
-                      subtitle: 'tefa.genion.site',
-                      color: Colors.indigo[600]!,
-                      onTap: () {
-                        _launchURL('https://tefa.genion.site');
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Website: tefa.genion.site'),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    SizedBox(height: 32),
-
-                    // Credits
-                    Center(
-                      child: Column(
-                        children: [
-                          Text(
-                            'Develop by',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 13,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.favorite, color: Colors.red[400], size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Genion Team',
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            '© 2025 KASIS . All rights reserved.',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 11,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],
@@ -301,239 +212,372 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey[900],
-      ),
-    );
-  }
-
-  Widget _buildDescriptionCard(String description) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey[200]!,
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+  Widget _buildAnimatedSection({required int delay, required Widget child}) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Interval(
+            delay / 2000,
+            (delay + 500) / 2000,
+            curve: Curves.easeOut,
           ),
-        ],
-      ),
-      child: Text(
-        description,
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.grey[700],
-          height: 1.6,
         ),
-        textAlign: TextAlign.justify,
+      ),
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.1),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: Interval(
+              delay / 2000,
+              (delay + 500) / 2000,
+              curve: Curves.easeOut,
+            ),
+          ),
+        ),
+        child: child,
       ),
     );
   }
 
-  Widget _buildFeatureItem({
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: const Color(0xFF2563EB), size: 20),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDescriptionSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Tentang Aplikasi', Icons.info_outline_rounded),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.06),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                'KASIS App adalah solusi manajemen osis modern yang dirancang untuk efisiensi dan transparansi. Mengelola data keuangan, pelanggaran siswa, dan laporan kini menjadi lebih mudah dan akurat.',
+                style: TextStyle(
+                  fontSize: 16,
+                  height: 1.6,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.justify,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeaturesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Fitur Unggulan', Icons.stars_rounded),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _buildFeatureCard(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Keuangan',
+              color: Colors.green,
+            ),
+            _buildFeatureCard(
+              icon: Icons.warning_amber_rounded,
+              title: 'Pelanggaran',
+              color: Colors.orange,
+            ),
+            _buildFeatureCard(
+              icon: Icons.analytics_outlined,
+              title: 'Laporan',
+              color: Colors.blue,
+            ),
+            _buildFeatureCard(
+              icon: Icons.verified_user_outlined,
+              title: 'Offline Mode',
+              color: Colors.purple,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureCard({
     required IconData icon,
     required String title,
-    required String description,
     required Color color,
   }) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey[200]!,
-          width: 1.5,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = (constraints.maxWidth - 16) / 2;
+        return Container(
+          width: width,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[100]!),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 28),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDeveloperSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Developer Team', Icons.code_rounded),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF2563EB), Color(0xFF1E40AF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              const CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.group_rounded, size: 40, color: Color(0xFF2563EB)),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Genion Team',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Innovating Education Technology',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.blue[100],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildSocialIcon(FontAwesomeIcons.github, 'https://github.com/Genion-Project'),
+                  const SizedBox(width: 16),
+                  _buildSocialIcon(FontAwesomeIcons.instagram, 'https://www.instagram.com/genionteam?igsh=bno4Z3U3ano3bTY2'),
+                  const SizedBox(width: 16),
+                  _buildSocialIcon(FontAwesomeIcons.linkedin, 'https://linkedin.com'),
+                ],
+              ),
+            ],
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+      ],
+    );
+  }
+
+  Widget _buildSocialIcon(IconData icon, String url) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _launchURL(url),
+        borderRadius: BorderRadius.circular(50),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withOpacity(0.2)),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey[900],
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
       ),
     );
   }
 
-  Widget _buildInfoCard({
+  Widget _buildContactSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Hubungi Kami', Icons.headset_mic_rounded),
+        const SizedBox(height: 16),
+        _buildContactTile(
+          context,
+          icon: Icons.email_rounded,
+          title: 'Email Support',
+          subtitle: 'genionteam@gmail.com',
+          color: Colors.red,
+          onTap: () => _launchURL('mailto:genionteam@gmail.com'),
+        ),
+        const SizedBox(height: 12),
+        _buildContactTile(
+          context,
+          icon: Icons.language_rounded,
+          title: 'Kunjungi Website',
+          subtitle: 'genion.site',
+          color: Colors.indigo,
+          onTap: () => _launchURL('https://genion.site/'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContactTile(
+    BuildContext context, {
     required IconData icon,
     required String title,
-    required String subtitle,
-    required Color color,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey[200]!,
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.grey[900],
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactButton({
-    required IconData icon,
-    required String label,
     required String subtitle,
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.grey[200]!,
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.grey[900],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey[400], size: 16),
-            ],
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
         ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Center(
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          Text(
+            '© 2025 Genion Team. All rights reserved.',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[400],
+            ),
+          ),
+        ],
       ),
     );
   }

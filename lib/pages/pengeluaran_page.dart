@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/transaction_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/add_transaction_screen.dart';
-import '../services/api_service.dart';
+import '../models/transaction_model.dart';
+import 'package:intl/intl.dart';
 
 class PengeluaranPage extends StatefulWidget {
   const PengeluaranPage({super.key});
@@ -11,15 +14,16 @@ class PengeluaranPage extends StatefulWidget {
 }
 
 class _PengeluaranPageState extends State<PengeluaranPage> {
-  List<Map<String, dynamic>> _riwayatPengeluaran = [];
-  bool _isLoading = false;
   String _jabatan = '';
 
   @override
   void initState() {
     super.initState();
     _loadJabatan();
-    _loadPengeluaran();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TransactionProvider>().fetchDashboardData();
+    });
   }
 
   Future<void> _loadJabatan() async {
@@ -29,51 +33,12 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
     });
   }
 
-  Future<void> _loadPengeluaran() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final data = await ApiService.getPengeluaran();
-      setState(() {
-        _riwayatPengeluaran = data.map((item) {
-          return {
-            'id': item['id'],
-            'judul': item['judul'] ?? 'Pengeluaran',
-            'jumlah': (item['jumlah'] ?? 0).toDouble(),
-            'tanggal': DateTime.parse(item['tanggal'] ?? DateTime.now().toIso8601String()),
-            'keterangan': item['keterangan'] ?? '',
-            'icon': Icons.money_off,
-            'color': Colors.red,
-            // Tambahan data lain jika ada dari API
-            'dibuat_oleh': item['dibuat_oleh'] ?? 'Admin',
-            'kategori': item['kategori'] ?? 'Pengeluaran',
-            'metode_pembayaran': item['metode_pembayaran'] ?? 'Tunai',
-            'bukti_pembayaran': item['bukti_pembayaran'] ?? '',
-          };
-        }).toList();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal memuat data: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
-    }
+  void _loadPengeluaran() {
+    context.read<TransactionProvider>().fetchDashboardData();
   }
 
-  double get _totalPengeluaran {
-    return _riwayatPengeluaran.fold(0, (sum, item) => sum + item['jumlah']);
+  double _getTotalPengeluaran(List<TransactionModel> data) {
+    return data.fold(0, (sum, item) => sum + item.amount);
   }
 
   void _tambahPengeluaran() async {
@@ -99,25 +64,18 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   }
 
   String _formatTanggal(DateTime tanggal) {
-    final bulan = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    final hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-    return '${hari[tanggal.weekday - 1]}, ${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
+    return DateFormat('dd MMM yyyy', 'id_ID').format(tanggal);
   }
 
-  String _formatWaktu(DateTime tanggal) {
-    final jam = tanggal.hour.toString().padLeft(2, '0');
-    final menit = tanggal.minute.toString().padLeft(2, '0');
-    return '$jam:$menit WIB';
+  String _formatWaktu(String waktu) {
+    return waktu;
   }
 
   bool get _canAddTransaction {
     return _jabatan != 'Anggota' && _jabatan != 'Guru';
   }
 
-  void _showDetailPengeluaran(Map<String, dynamic> item) {
+  void _showDetailPengeluaran(TransactionModel item) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -132,14 +90,22 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: _isLoading
-          ? Center(
+      body: Consumer<TransactionProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading && provider.pengeluaran.isEmpty) {
+            return Center(
               child: CircularProgressIndicator(
                 color: Colors.red[600],
                 strokeWidth: 3,
               ),
-            )
-          : CustomScrollView(
+            );
+          }
+          
+          if (provider.error != null && provider.pengeluaran.isEmpty) {
+            return _buildErrorState();
+          }
+
+          return CustomScrollView(
               slivers: [
                 SliverAppBar(
                   expandedHeight: 200,
@@ -267,10 +233,10 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Rp ${_totalPengeluaran.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(_getTotalPengeluaran(provider.pengeluaran)),
                           style: TextStyle(
                             color: Color(0xFFBE123C),
-                            fontSize: 40,
+                            fontSize: 32,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -1,
                             height: 1.2,
@@ -302,7 +268,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '${_riwayatPengeluaran.length} Transaksi',
+                                '${provider.pengeluaran.length} Transaksi',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 13,
@@ -344,7 +310,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                   ),
                 ),
 
-                _riwayatPengeluaran.isEmpty
+                provider.pengeluaran.isEmpty
                     ? SliverFillRemaining(
                         child: Center(
                           child: Column(
@@ -388,7 +354,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final item = _riwayatPengeluaran[index];
+                              final item = provider.pengeluaran[index];
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 14),
                                 decoration: BoxDecoration(
@@ -416,12 +382,12 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                                             width: 56,
                                             height: 56,
                                             decoration: BoxDecoration(
-                                              color: item['color'].withOpacity(0.1),
+                                              color: Colors.red.withOpacity(0.1),
                                               borderRadius: BorderRadius.circular(16),
                                             ),
                                             child: Icon(
-                                              item['icon'],
-                                              color: item['color'],
+                                              Icons.money_off,
+                                              color: Colors.red,
                                               size: 26,
                                             ),
                                           ),
@@ -431,7 +397,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  item['judul'],
+                                                  item.title ?? 'Pengeluaran',
                                                   style: const TextStyle(
                                                     fontWeight: FontWeight.w700,
                                                     fontSize: 16,
@@ -440,7 +406,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                                                 ),
                                                 const SizedBox(height: 6),
                                                 Text(
-                                                  item['keterangan'],
+                                                  item.description,
                                                   style: TextStyle(
                                                     color: Colors.grey[600],
                                                     fontSize: 13,
@@ -469,7 +435,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                                                       ),
                                                       const SizedBox(width: 6),
                                                       Text(
-                                                        _formatTanggal(item['tanggal']),
+                                                        _formatTanggal(item.date),
                                                         style: TextStyle(
                                                           color: Colors.grey[600],
                                                           fontSize: 11,
@@ -487,7 +453,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                                             crossAxisAlignment: CrossAxisAlignment.end,
                                             children: [
                                               Text(
-                                                '- Rp ${item['jumlah'].toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                                                '- ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(item.amount)}',
                                                   style: TextStyle(
                                                   color: Color(0xFFBE123C),
                                                   fontWeight: FontWeight.w700,
@@ -503,12 +469,14 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                                 ),
                               );
                             },
-                            childCount: _riwayatPengeluaran.length,
+                            childCount: provider.pengeluaran.length,
                           ),
                         ),
                       ),
-              ],
-            ),
+                    ],
+                  );
+                },
+              ),
       floatingActionButton: _canAddTransaction
           ? Container(
               decoration: BoxDecoration(
@@ -541,10 +509,55 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
           : null,
     );
   }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.wifi_off_rounded, size: 64, color: Colors.red[300]),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Koneksi Gagal',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Gagal mengambil data pengeluaran.\nMohon periksa koneksi internet Anda.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: _loadPengeluaran,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Coba Lagi'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE11D48),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class DetailPengeluaranModal extends StatelessWidget {
-  final Map<String, dynamic> item;
+  final TransactionModel item;
 
   const DetailPengeluaranModal({
     super.key,
@@ -552,18 +565,61 @@ class DetailPengeluaranModal extends StatelessWidget {
   });
 
   String _formatTanggal(DateTime tanggal) {
-    final bulan = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    final hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-    return '${hari[tanggal.weekday - 1]}, ${tanggal.day} ${bulan[tanggal.month - 1]} ${tanggal.year}';
+    return DateFormat('dd MMM yyyy', 'id_ID').format(tanggal);
   }
 
-  String _formatWaktu(DateTime tanggal) {
-    final jam = tanggal.hour.toString().padLeft(2, '0');
-    final menit = tanggal.minute.toString().padLeft(2, '0');
-    return '$jam:$menit WIB';
+  String _formatWaktu(String waktu) {
+    return waktu;
+  }
+
+  Widget _buildDetailItem({
+    required IconData icon,
+    required String title,
+    required String? value,
+    required Color color,
+  }) {
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -616,15 +672,15 @@ class DetailPengeluaranModal extends StatelessWidget {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              item['color'].withOpacity(0.2),
-                              item['color'].withOpacity(0.1),
+                              Colors.red.withOpacity(0.2),
+                              Colors.red.withOpacity(0.1),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(
-                          item['icon'],
-                          color: item['color'],
+                          Icons.money_off,
+                          color: Colors.red,
                           size: 32,
                         ),
                       ),
@@ -634,7 +690,7 @@ class DetailPengeluaranModal extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              item['judul'],
+                              item.title ?? 'Pengeluaran',
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,
@@ -645,7 +701,7 @@ class DetailPengeluaranModal extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'ID: ${item['id']}',
+                              'ID: ${item.id}',
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 13,
@@ -678,7 +734,7 @@ class DetailPengeluaranModal extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '- Rp ${item['jumlah'].toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          '- ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(item.amount)}',
                           style: TextStyle(
                             color: Colors.red[700],
                             fontSize: 36,
@@ -706,25 +762,25 @@ class DetailPengeluaranModal extends StatelessWidget {
                   _buildDetailItem(
                     icon: Icons.description_rounded,
                     title: 'Keterangan',
-                    value: item['keterangan'],
+                    value: item.description,
                     color: Colors.blue,
                   ),
                   _buildDetailItem(
                     icon: Icons.category_rounded,
                     title: 'Kategori',
-                    value: item['kategori'],
+                    value: item.category,
                     color: Colors.green,
                   ),
                   _buildDetailItem(
                     icon: Icons.payment_rounded,
                     title: 'Metode Pembayaran',
-                    value: item['metode_pembayaran'],
+                    value: item.paymentMethod,
                     color: Colors.purple,
                   ),
                   _buildDetailItem(
                     icon: Icons.person_rounded,
                     title: 'Dibuat Oleh',
-                    value: item['dibuat_oleh'],
+                    value: item.createdBy,
                     color: Colors.orange,
                   ),
 
@@ -767,7 +823,7 @@ class DetailPengeluaranModal extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _formatTanggal(item['tanggal']),
+                                _formatTanggal(item.date),
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -775,7 +831,7 @@ class DetailPengeluaranModal extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                _formatWaktu(item['tanggal']),
+                                _formatWaktu(item.time),
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
@@ -789,7 +845,7 @@ class DetailPengeluaranModal extends StatelessWidget {
                   ),
 
                   // Bukti Pembayaran (jika ada)
-                  if (item['bukti_pembayaran'] != null && item['bukti_pembayaran'].isNotEmpty)
+                  if (item.proof != null && item.proof!.isNotEmpty)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -803,116 +859,23 @@ class DetailPengeluaranModal extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () {
-                            // TODO: Implement full screen view for proof
-                          },
-                          child: Container(
-                            height: 200,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(16),
-                              image: DecorationImage(
-                                image: NetworkImage(item['bukti_pembayaran']),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  bottom: 12,
-                                  right: 12,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.7),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: const Row(
-                                      children: [
-                                        Icon(
-                                          Icons.zoom_in_rounded,
-                                          color: Colors.white,
-                                          size: 14,
-                                        ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          'Perbesar',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
+                        Container(
+                          height: 200,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.grey[100],
+                            border: Border.all(color: Colors.grey[300]!),
+                            image: DecorationImage(
+                              image: NetworkImage(item.proof!), // Placeholder/Actual image
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
                       ],
                     ),
-
+                    
                   const SizedBox(height: 30),
-
-                  // Tombol Aksi
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            side: BorderSide(color: Colors.grey[300]!),
-                          ),
-                          child: const Text(
-                            'Tutup',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      if (_isAdmin()) // Anda bisa menyesuaikan kondisi ini
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              // TODO: Implement edit functionality
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red[600],
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                            ),
-                            child: const Text(
-                              'Edit',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -920,66 +883,5 @@ class DetailPengeluaranModal extends StatelessWidget {
         );
       },
     );
-  }
-
-  Widget _buildDetailItem({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _isAdmin() {
-    // Logika untuk menentukan apakah user adalah admin
-    return true; // Ganti dengan logika sesuai kebutuhan
   }
 }

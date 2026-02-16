@@ -1,8 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/user_model.dart';
+import '../models/transaction_model.dart';
+import '../models/report_model.dart';
+import '../models/member_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://serururu.pythonanywhere.com'; // ganti sesuai server
+  static const String baseUrl = 'https://api-kasis.smknurisjkt.org'; // ganti sesuai server
+
+  static const Duration _timeout = Duration(seconds: 15);
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/login');
@@ -10,7 +18,7 @@ class ApiService {
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
-    );
+    ).timeout(_timeout);
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body); // sukses
@@ -25,7 +33,7 @@ class ApiService {
       Uri.parse("$baseUrl/pelanggaran"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(data),
-    );
+    ).timeout(_timeout);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return; // sukses, biar widget yg kasih feedback
@@ -35,7 +43,7 @@ class ApiService {
   }
 
   static Future<List<Map<String, dynamic>>> getPelanggaran() async {
-    final response = await http.get(Uri.parse('$baseUrl/pelanggaran'));
+    final response = await http.get(Uri.parse('$baseUrl/pelanggaran')).timeout(_timeout);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       final List<dynamic> data = jsonDecode(response.body);
@@ -49,53 +57,59 @@ class ApiService {
   static Future<bool> deletePelanggaran(int id) async {
     try {
       final url = Uri.parse('$baseUrl/pelanggaran/$id');
-      final response = await http.delete(url);
+      final response = await http.delete(url).timeout(_timeout);
 
       if (response.statusCode == 200) {
         return true;
       } else {
-        print('❌ Gagal hapus pelanggaran: ${response.body}');
         return false;
       }
     } catch (e) {
-      print('❌ Error deletePelanggaran: $e');
       return false;
     }
   }
 
+
+
   // Ambil semua members dengan total kas yang sudah dibayar
-  static Future<List<Map<String, dynamic>>> getMembers() async {
+  static Future<List<Member>> getMembers() async {
+    const String cacheKey = 'members_cache';
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+
     final url = Uri.parse('$baseUrl/members');
-    final response = await http.get(url);
+    
+    try {
+      final response = await http.get(url).timeout(_timeout);
 
-    if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body);
-
-      // Debug: tampilkan response mentah di terminal
-      print('RAW members: $data');
-
-      final members = data.map((e) => {
-        'id': e['id'],
-        'name': e['name'],
-        'amount': e['total_paid'],
-        'avatar': (e['name'] != null && e['name'].isNotEmpty) ? e['name'][0].toUpperCase() : '?',
-      }).toList();
-
-      // Debug: tampilkan hasil mapping di terminal
-      print('Mapped members: $members');
-
-      return members;
-    } else {
-      throw Exception('Gagal mengambil data members');
+      if (response.statusCode == 200) {
+        // Simpan ke cache
+        await prefs.setString(cacheKey, response.body);
+        
+        final List data = jsonDecode(response.body);
+        return data.map((e) => Member.fromJson(e)).toList();
+      } else {
+        throw Exception('Gagal mengambil data members');
+      }
+    } catch (e) {
+      // Coba load dari cache jika API gagal
+      if (prefs.containsKey(cacheKey)) {
+        final cachedData = prefs.getString(cacheKey);
+        if (cachedData != null) {
+          final List data = jsonDecode(cachedData);
+          return data.map((e) => Member.fromJson(e)).toList();
+        }
+      }
+      // Jika cache juga gagal/kosong, rethrow error asli
+      throw e;
     }
   }
 
   static Future<List<Map<String, dynamic>>> getMemberPayments(int siswaId) async {
-    final url = Uri.parse('$baseUrl/members/$siswaId/payments');
-    final response = await http.get(url);
+    final url = Uri.parse('$baseUrl/users/$siswaId/payments');
+    final response = await http.get(url).timeout(_timeout);
 
     if (response.statusCode != 200) {
-      throw Exception('Gagal mengambil detail pembayaran');
+      throw Exception('Gagal mengambil detail pembayaran (${response.statusCode}): ${response.body}');
     }
 
     final List data = jsonDecode(response.body);
@@ -114,23 +128,26 @@ class ApiService {
     return payments;
   }
 
-  static Future<Map<String, dynamic>> getLaporan() async {
-    final url = Uri.parse('$baseUrl/laporan');
-    final response = await http.get(url);
+  static Future<ReportModel> getLaporan() async {
+    try {
+      final url = Uri.parse('$baseUrl/laporan');
+      final response = await http.get(url).timeout(_timeout);
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      // Debug: tampilkan hasil di terminal
-      print('RAW laporan: $data');
-
-      return {
-        'total_pemasukan': data['total_pemasukan'] ?? 0,
-        'total_pengeluaran': data['total_pengeluaran'] ?? 0,
-        'saldo': data['saldo'] ?? 0,
-      };
-    } else {
-      throw Exception('Gagal mengambil laporan');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ReportModel.fromJsonWithFallback(data);
+      } else {
+        throw Exception('Gagal mengambil laporan: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Gagal memuat laporan');
     }
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0.0;
   }
 
   // Tambah siswa
@@ -140,7 +157,7 @@ class ApiService {
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'nama_siswa': namaSiswa}),
-    );
+    ).timeout(_timeout);
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body);
@@ -152,7 +169,7 @@ class ApiService {
   // Generate kas mingguan untuk siswa
   static Future<void> generateKasMingguan(int siswaId) async {
     final url = Uri.parse('$baseUrl/generate_kas/$siswaId');
-    final response = await http.post(url);
+    final response = await http.post(url).timeout(_timeout);
 
     if (response.statusCode != 200) {
       throw Exception('Gagal generate kas mingguan');
@@ -170,12 +187,12 @@ class ApiService {
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'siswa_id': siswaId,
+        'user_id': siswaId,
         'minggu_ke': mingguKe,
         'jumlah': jumlah,
         'keterangan': keterangan,
       }),
-    );
+    ).timeout(_timeout);
 
     if (response.statusCode != 200) {
       throw Exception('Gagal membayar: ${response.body}');
@@ -185,7 +202,7 @@ class ApiService {
   /// Ambil rekap pelanggaran (jumlah per siswa + total poin)
   static Future<List<Map<String, dynamic>>> getRekapPelanggaran() async {
     final url = Uri.parse("$baseUrl/pelanggaran");
-    final response = await http.get(url);
+    final response = await http.get(url).timeout(_timeout);
 
     if (response.statusCode == 200) {
       final List data = jsonDecode(response.body);
@@ -217,41 +234,33 @@ class ApiService {
   }
 
   // Ambil semua pemasukan
-  static Future<List<dynamic>> getPemasukan() async {
+  static Future<List<TransactionModel>> getPemasukan() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl/pemasukan"));
-      
-      print('Status getPemasukan: ${response.statusCode}');
-      print('Response getPemasukan: ${response.body}');
+      final response = await http.get(Uri.parse("$baseUrl/pemasukan")).timeout(_timeout);
       
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data is List ? data : [];
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => TransactionModel.fromJson(json, TransactionType.pemasukan)).toList();
       } else {
         throw Exception("Gagal memuat data pemasukan: ${response.statusCode}");
       }
     } catch (e) {
-      print('Error di getPemasukan: $e');
       throw Exception("Gagal memuat data pemasukan: $e");
     }
   }
 
   // Ambil semua pengeluaran
-  static Future<List<dynamic>> getPengeluaran() async {
+  static Future<List<TransactionModel>> getPengeluaran() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl/pengeluaran"));
-      
-      print('Status getPengeluaran: ${response.statusCode}');
-      print('Response getPengeluaran: ${response.body}');
+      final response = await http.get(Uri.parse("$baseUrl/pengeluaran")).timeout(_timeout);
       
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data is List ? data : [];
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => TransactionModel.fromJson(json, TransactionType.pengeluaran)).toList();
       } else {
         throw Exception("Gagal memuat data pengeluaran: ${response.statusCode}");
       }
     } catch (e) {
-      print('Error di getPengeluaran: $e');
       throw Exception("Gagal memuat data pengeluaran: $e");
     }
   }
@@ -280,16 +289,14 @@ class ApiService {
         Uri.parse("$baseUrl/pemasukan"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(body),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 201) {
         return true;
       } else {
-        print("❌ Gagal tambah pemasukan: ${response.body}");
         return false;
       }
     } catch (e) {
-      print("❌ Error addPemasukan: $e");
       return false;
     }
   }
@@ -313,29 +320,26 @@ class ApiService {
         Uri.parse("$baseUrl/pengeluaran"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(body),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return true;
       } else {
-        print("❌ Gagal tambah pengeluaran: ${response.body}");
         return false;
       }
     } catch (e) {
-      print("❌ Error addPengeluaran: $e");
       return false;
     }
   }
 
-  static Future<Map<String, dynamic>> registerUser({
+  // === OTP & Registration ===
+  static Future<void> requestOtp({
     required String email,
     required String nama,
     required String noTelp,
-    required String password,
-    String jabatan = 'Anggota',
   }) async {
-    final url = Uri.parse('$baseUrl/register');
-
+    final url = Uri.parse('$baseUrl/request-otp');
+    
     try {
       final response = await http.post(
         url,
@@ -344,19 +348,138 @@ class ApiService {
           'email': email,
           'nama': nama,
           'no_telp': noTelp,
-          'password': password,
-          'jabatan': jabatan,
         }),
-      );
+      ).timeout(_timeout);
 
-      if (response.statusCode == 201) {
-        return jsonDecode(response.body); // sukses
-      } else {
-        final body = jsonDecode(response.body);
-        throw Exception(body['error'] ?? 'Gagal mendaftarkan user');
+      if (response.statusCode != 200) {
+        // Check if response is JSON or HTML
+        if (response.body.trim().startsWith('<') || response.body.trim().startsWith('<!DOCTYPE')) {
+          throw Exception('Server error (${response.statusCode}). Endpoint mungkin tidak tersedia.');
+        }
+        
+        try {
+          final body = jsonDecode(response.body);
+          throw Exception(body['error'] ?? 'Gagal mengirim OTP');
+        } catch (e) {
+          throw Exception('Gagal mengirim OTP (${response.statusCode})');
+        }
       }
     } catch (e) {
-      throw Exception('Terjadi kesalahan: $e');
+        throw Exception(e.toString());
+    }
+  }
+
+  static Future<void> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final url = Uri.parse('$baseUrl/verify-otp');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+        }),
+      ).timeout(_timeout);
+
+      if (response.statusCode != 200) {
+        throw Exception('OTP Salah atau Kadaluarsa');
+      }
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  static Future<void> setPassword({
+    required String email,
+    required String password,
+  }) async {
+    final url = Uri.parse('$baseUrl/set-password');
+    
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      ).timeout(_timeout);
+
+      if (response.statusCode != 200) {
+        // Check if response is JSON or HTML
+        if (response.body.trim().startsWith('<') || response.body.trim().startsWith('<!DOCTYPE')) {
+          throw Exception('Server error (${response.statusCode}). Endpoint mungkin tidak tersedia.');
+        }
+        
+        try {
+          final body = jsonDecode(response.body);
+          throw Exception(body['error'] ?? 'Gagal menyimpan password');
+        } catch (e) {
+          throw Exception('Gagal menyimpan password (${response.statusCode})');
+        }
+      }
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Koneksi gagal: $e');
+    }
+  }
+
+  // === Forgot Password ===
+  static Future<void> forgotPasswordRequest(String email) async {
+    final url = Uri.parse('$baseUrl/forgot-password/request');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    ).timeout(_timeout);
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Gagal memproses permintaan');
+    }
+  }
+
+  static Future<void> forgotPasswordVerify({
+    required String email,
+    required String otp,
+  }) async {
+    final url = Uri.parse('$baseUrl/forgot-password/verify');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'otp': otp,
+      }),
+    ).timeout(_timeout);
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'OTP tidak valid');
+    }
+  }
+
+  static Future<void> forgotPasswordReset({
+    required String email,
+    required String password,
+  }) async {
+    final url = Uri.parse('$baseUrl/forgot-password/reset');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+      }),
+    ).timeout(_timeout);
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Gagal reset password');
     }
   }
 
@@ -371,10 +494,10 @@ class ApiService {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'siswa_id': siswaId,
+          'user_id': siswaId,
           'minggu_ke': mingguKe,
         }),
-      );
+      ).timeout(_timeout);
 
       if (response.statusCode == 200) {
         // berhasil

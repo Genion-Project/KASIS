@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class PelanggaranCard extends StatelessWidget {
   final int? id; // Tambahan untuk ID pelanggaran
   final String nama;
   final String kelas;
-  final String tanggal;
-  final String waktu;
+  final dynamic tanggal;
+  final dynamic waktu;
   final String jenisPelanggaran;
   final int poin;
   final String keterangan;
@@ -31,33 +32,53 @@ class PelanggaranCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Parsing Tanggal & Waktu logic
-    String displayTanggal = tanggal;
-    String displayWaktu = waktu;
+    String displayTanggal = '-';
+    String displayWaktu = '-';
 
     try {
-      // Jika tanggal mengandung waktu (format YYYY-MM-DD HH:mm:ss)
-      if (tanggal.contains(' ')) {
-        final parts = tanggal.split(' ');
-        if (parts.length >= 2) {
-          displayTanggal = parts[0]; // Ambil bagian tanggal saja
-          
-          // Jika waktu kosong atau '-', ambil dari timestamp
-          if (waktu == '-' || waktu.isEmpty) {
-            // Coba parsing agar format lebih rapi (misal ambil HH:mm saja)
-            final timePart = parts[1];
-            final timeParts = timePart.split(':');
-            if (timeParts.length >= 2) {
-              displayWaktu = '${timeParts[0]}:${timeParts[1]}'; // HH:mm
-            } else {
-              displayWaktu = timePart;
+      DateTime? dt;
+      
+      // 1. Handle Tanggal (Primary source)
+      if (tanggal is DateTime) {
+        dt = tanggal;
+      } else if (tanggal is String && tanggal.isNotEmpty && tanggal != '-') {
+        dt = DateTime.tryParse(tanggal);
+        // Jika gagal parse standard, coba manual split jika ada spasi/T (YYYY-MM-DD HH:mm:ss)
+        if (dt == null && (tanggal.contains(' ') || tanggal.contains('T'))) {
+          // Fallback parsing manual jika diperlukan bisa di sini
+        }
+      }
+
+      if (dt != null) {
+        displayTanggal = DateFormat('yyyy-MM-dd').format(dt);
+        displayWaktu = DateFormat('HH:mm').format(dt);
+      } else if (tanggal is String) {
+        displayTanggal = tanggal;
+      }
+
+      // 2. Handle Waktu (Secondary source / Override)
+      // JIKA displayWaktu masih '-' atau '00:00' (default midnight), 
+      // dan ada input 'waktu' yang lebih spesifik, gunakan itu.
+      if (waktu != null && waktu != '-' && waktu != '00:00' && waktu != '00:00:00') {
+        if (waktu is DateTime) {
+          displayWaktu = DateFormat('HH:mm').format(waktu);
+        } else if (waktu is String) {
+          if (waktu.contains(':')) {
+            final parts = waktu.split(':');
+            if (parts.length >= 2) {
+              String h = parts[0].padLeft(2, '0');
+              String m = parts[1].padLeft(2, '0');
+              // Hanya gunakan jika bukan 00:00 atau jika kita belum punya waktu dari dt
+              if (h != '00' || m != '00' || displayWaktu == '-') {
+                displayWaktu = "$h:$m";
+              }
             }
           }
         }
       }
     } catch (_) {
-      // Fallback jika parsing gagal
-      displayTanggal = tanggal;
-      displayWaktu = waktu;
+      displayTanggal = tanggal?.toString() ?? '-';
+      displayWaktu = waktu?.toString() ?? '-';
     }
 
     return Card(

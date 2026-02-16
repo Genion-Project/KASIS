@@ -30,8 +30,8 @@ class FilterSection extends StatelessWidget {
               Expanded(
                 child: FormBuilderDateRangePicker(
                   name: 'date_range',
-                  firstDate: DateTime(2024),
-                  lastDate: DateTime(2026),
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2100),
                   initialValue: selectedDateRange, // cukup pakai ini
                   decoration: InputDecoration(
                     labelText: 'Filter Tanggal',

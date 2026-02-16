@@ -2,6 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'dart:io';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../services/local_storage.dart';
 import '../../services/api_service.dart';
 
 class InputPelanggaranDialog extends StatefulWidget {
@@ -67,12 +72,16 @@ class _InputPelanggaranDialogState extends State<InputPelanggaranDialog> {
   }
 
   int _getPoin(String jenis) {
-    if (jenis == 'telat') return 10;
-    return 5;
+    if (jenis == 'telat') return 5;
+    return 1;
   }
 
   Future<void> _handleSave() async {
+    print("INPUT_DEBUG: Tombol Simpan ditekan.");
+    print("INPUT_DEBUG: Data -> Nama: ${_namaController.text}, Kelas: $_selectedKelas, Jenis: $_selectedJenisPelanggaran");
+
     if (_namaController.text.isEmpty || _selectedKelas == null || _selectedJenisPelanggaran == null) {
+      print("INPUT_DEBUG: Validasi GAGAL. Data tidak lengkap.");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -87,7 +96,7 @@ class _InputPelanggaranDialogState extends State<InputPelanggaranDialog> {
                   child: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(child: Text("Harap lengkapi data wajib!", style: TextStyle(fontWeight: FontWeight.w600))),
+                Expanded(child: Text("Data tidak lengkap! Nama, Kelas (pilih dari saran), dan Jenis wajib diisi.", style: TextStyle(fontWeight: FontWeight.w600))),
               ],
             ),
             backgroundColor: const Color(0xFFF59E0B), // Amber 500
@@ -104,19 +113,180 @@ class _InputPelanggaranDialogState extends State<InputPelanggaranDialog> {
     setState(() => _loading = true);
     try {
       int poin = _getPoin(_selectedJenisPelanggaran!);
-      String tanggal = DateFormat("yyyy-MM-dd HH:mm:ss").format(DateTime.now());
+      final now = DateTime.now();
+      String todayStr = DateFormat("yyyy-MM-dd").format(now);
+      
+      // CHECK FOR DUPLICATES (Server + Local)
+      try {
+        final List<Map<String, dynamic>> allRecords = [];
+        
+        // 1. Ambil data server (jika mungkin)
+        try {
+          final serverRecords = await ApiService.getPelanggaran();
+          allRecords.addAll(serverRecords);
+        } catch (e) {
+          debugPrint("Note: Could not fetch server records for duplicate check: $e");
+        }
 
-      await ApiService.addPelanggaran({
+        // 2. Ambil data lokal (offline list)
+        try {
+          final localRecords = await LocalStorage.instance.getUnsyncedPelanggaran();
+          allRecords.addAll(localRecords);
+        } catch (e) {
+          debugPrint("Note: Could not fetch local records for duplicate check: $e");
+        }
+
+        bool isDuplicate = allRecords.any((item) {
+          final itemDateStr = item['tanggal'].toString();
+          // Cek apakah namanya sama, jenisnya sama, dan tanggalnya sama (hari ini)
+          return item['nama']?.toString().trim().toLowerCase() == _namaController.text.trim().toLowerCase() &&
+                 item['jenis_pelanggaran']?.toString().toLowerCase() == _selectedJenisPelanggaran?.toLowerCase() &&
+                 itemDateStr.startsWith(todayStr);
+        });
+
+        if (isDuplicate) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        "Gagal! Pelanggaran ini sudah dicatat hari ini (bisa di server atau offline).",
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF334155), // Slate 700
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
+              ),
+            );
+          }
+          setState(() => _loading = false);
+          return;
+        }
+      } catch (e) {
+        debugPrint("Critical Error in duplicate check: $e");
+      }
+
+      // Mengirimkan format yang lebih lengkap agar server/database bisa mengenalinya
+      String tanggal = now.toIso8601String(); 
+      String waktu = DateFormat("HH:mm:ss").format(now);
+      
+      final pelanggaranData = {
         "nama": _namaController.text,
         "kelas": _selectedKelas!,
         "jenis_pelanggaran": _selectedJenisPelanggaran!,
         "keterangan": _keteranganController.text,
         "poin": poin,
-        "tanggal": tanggal,
-      });
+        "tanggal": tanggal, // Full timestamp
+        "waktu": waktu,
+        "jam": waktu,
+      };
 
+      // Check Connectivity
+      final connectivityResult = await Connectivity().checkConnectivity();
+      bool isOffline = connectivityResult.contains(ConnectivityResult.none);
+      print("INPUT_DEBUG: Initial connectivity check: $connectivityResult, isOffline: $isOffline");
+      
+      // Optional: Stronger check with lookup if "connected" but no internet
+      if (!isOffline) {
+        try {
+           print("INPUT_DEBUG: Doing DNS lookup...");
+           final result = await InternetAddress.lookup('google.com');
+           if (result.isEmpty || result[0].rawAddress.isEmpty) {
+             isOffline = true;
+             print("INPUT_DEBUG: DNS lookup failed (empty result). Setting isOffline = true");
+           } else {
+             print("INPUT_DEBUG: DNS lookup success.");
+           }
+        } on SocketException catch (_) {
+           isOffline = true;
+           print("INPUT_DEBUG: DNS lookup threw SocketException. Setting isOffline = true");
+        }
+      }
+
+      print("INPUT_DEBUG: Final decision -> isOffline: $isOffline");
+
+      if (isOffline) {
+        print("INPUT_DEBUG: Saving locally...");
+        // SAVE LOCALLY
+        await _saveLocally(pelanggaranData);
+      } else {
+        print("INPUT_DEBUG: Saving Online...");
+        // ONLINE STORE
+        try {
+          await ApiService.addPelanggaran(pelanggaranData);
+          _showSuccessSnackbar("Data berhasil disimpan ke Server!");
+          Navigator.pop(context);
+          widget.onSaved();
+        } catch (e) {
+          // If API fails, Fallback to Local
+          debugPrint("API Error, falling back to local: $e");
+          await _saveLocally(pelanggaranData);
+        }
+      }
+
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text("Gagal menyimpan: $e")),
+              ],
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+             margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _saveLocally(Map<String, dynamic> data) async {
+    try {
+      await LocalStorage.instance.insertPelanggaran(data);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                 Icon(PhosphorIconsRegular.cloudSlash, color: Colors.white, size: 20),
+                 SizedBox(width: 12),
+                 Expanded(child: Text("Offline: Data disimpan di HP sementara", style: TextStyle(fontWeight: FontWeight.w600))),
+              ],
+            ),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+        Navigator.pop(context);
+        widget.onSaved();
+      }
+    } catch (e) {
+      throw e; // Let main catch handle it
+    }
+  }
+
+  void _showSuccessSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -129,7 +299,7 @@ class _InputPelanggaranDialogState extends State<InputPelanggaranDialog> {
                   child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(child: Text("Data berhasil disimpan!", style: TextStyle(fontWeight: FontWeight.w600))),
+                Expanded(child: Text(message, style: TextStyle(fontWeight: FontWeight.w600))),
               ],
             ),
             backgroundColor: const Color(0xFF10B981), // Emerald 500
@@ -139,33 +309,6 @@ class _InputPelanggaranDialogState extends State<InputPelanggaranDialog> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         );
-
-        Navigator.pop(context);
-        widget.onSaved();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 12),
-                Expanded(child: Text("Gagal menyimpan: $e")),
-              ],
-            ),
-            backgroundColor: const Color(0xFFEF4444), // Red 500
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-             margin: const EdgeInsets.all(16),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
   }
 
   @override
@@ -403,14 +546,86 @@ class _InputPelanggaranDialogState extends State<InputPelanggaranDialog> {
                         fontWeight: FontWeight.w500,
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'telat', child: Text('⏰ Datang Telat')),
-                        DropdownMenuItem(value: 'dasi', child: Text('👔 Tidak Memakai Dasi')),
-                        DropdownMenuItem(value: 'sepatu', child: Text('👞 Sepatu Tidak Sesuai')),
-                        DropdownMenuItem(value: 'gesper', child: Text('📎 Gesper Tidak Sesuai')),
-                        DropdownMenuItem(value: 'kaos kaki', child: Text('🧦 Kaus Kaki Tidak sesuai')),
-                        DropdownMenuItem(value: 'rok', child: Text('👗 Memakai Rok Span')),
-                        DropdownMenuItem(value: 'seragam', child: Text('👕 Seragam Tidak sesuai hari')),
-                        DropdownMenuItem(value: 'ciput', child: Text('🧕 Tidak Pakai Ciput')),
+                        DropdownMenuItem(
+                          value: 'telat',
+                          child: Row(
+                            children: [
+                              FaIcon(FontAwesomeIcons.clock, size: 16, color: Color(0xFFF59E0B)),
+                              SizedBox(width: 10),
+                              Text('Datang Telat'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'dasi',
+                          child: Row(
+                            children: [
+                              FaIcon(FontAwesomeIcons.userTie, size: 16, color: Color(0xFF8B5CF6)),
+                              SizedBox(width: 10),
+                              Text('Tidak Memakai Dasi'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'sepatu',
+                          child: Row(
+                            children: [
+                              PhosphorIcon(PhosphorIconsRegular.sneaker, size: 18, color: Color(0xFF6366F1)),
+                              SizedBox(width: 10),
+                              Text('Sepatu Tidak Sesuai'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'gesper',
+                          child: Row(
+                            children: [
+                              PhosphorIcon(PhosphorIconsRegular.belt, size: 18, color: Color(0xFF64748B)),
+                              SizedBox(width: 10),
+                              Text('Gesper Tidak Sesuai'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'kaos kaki',
+                          child: Row(
+                            children: [
+                              FaIcon(FontAwesomeIcons.socks, size: 16, color: Color(0xFF06B6D4)),
+                              SizedBox(width: 10),
+                              Text('Kaus Kaki Tidak Sesuai'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'rok',
+                          child: Row(
+                            children: [
+                              FaIcon(FontAwesomeIcons.personDress, size: 16, color: Color(0xFFEC4899)),
+                              SizedBox(width: 10),
+                              Text('Memakai Rok Span'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'seragam',
+                          child: Row(
+                            children: [
+                              FaIcon(FontAwesomeIcons.shirt, size: 16, color: Color(0xFFEF4444)),
+                              SizedBox(width: 10),
+                              Text('Seragam Tidak Sesuai Hari'),
+                            ],
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'ciput',
+                          child: Row(
+                            children: [
+                              PhosphorIcon(PhosphorIconsRegular.beanie, size: 18, color: Color(0xFF10B981)),
+                              SizedBox(width: 10),
+                              Text('Tidak Pakai Ciput'),
+                            ],
+                          ),
+                        ),
                       ],
                       onChanged: (val) => setState(() => _selectedJenisPelanggaran = val),
                     ),

@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/transaction_provider.dart';
 import '../widgets/quick_action_widget.dart';
 import '../widgets/stat_card_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/activity_item_widget.dart';
 import '../pages/login_page.dart'; 
 import '../services/api_service.dart';
+import '../models/report_model.dart';
 import 'package:bendahara_app/pages/pemasukan_page.dart';
 import 'package:bendahara_app/pages/pengeluaran_page.dart';
 import 'package:bendahara_app/pages/riwayat_page.dart';
 import 'package:bendahara_app/pages/profile_page.dart';
 import 'package:bendahara_app/pages/about_page.dart';
+import '../models/transaction_model.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'dart:io';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,16 +26,60 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late Future<List<Map<String, dynamic>>> _aktivitasFuture;
   String _userName = 'Bendahara';
   String _jabatan = 'OSIS';
 
   @override
   void initState() {
     super.initState();
-    print('\n🚀 [HOME] HomeScreen initialized');
     _loadUserData();
-    _loadAktivitas();
+    _checkInternetAndLoadData();
+    
+    // Initial fetch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TransactionProvider>().fetchDashboardData();
+    });
+  }
+
+  Future<void> _checkInternetAndLoadData() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
+        _loadAktivitas();
+      }
+    } on SocketException catch (_) {
+      _showOfflineDialog();
+    }
+  }
+
+  void _showOfflineDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.wifi_off_rounded, color: Colors.orange[800]),
+            SizedBox(width: 10),
+            Text('Koneksi Terputus'),
+          ],
+        ),
+        content: Text('Tidak dapat terhubung ke internet. Mohon periksa koneksi Anda.'),
+        actions: [
+          TextButton(
+            onPressed: () => exit(0), // Keluar aplikasi
+            child: Text('Keluar', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Masuk offline mode (tetap di halaman tapi data mungkin kosong)
+            },
+            child: Text('Masuk Offline Mode'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadUserData() async {
@@ -45,127 +94,79 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadAktivitas() {
-    print('🔄 [HOME] Memuat ulang aktivitas...');
-    setState(() {
-      _aktivitasFuture = _fetchAktivitas();
-    });
+    context.read<TransactionProvider>().fetchDashboardData();
   }
 
-  Future<List<Map<String, dynamic>>> _fetchAktivitas() async {
-    print('🔄 [AKTIVITAS] Mulai fetch data aktivitas...');
-    
-    try {
-      print('📡 [AKTIVITAS] Mengirim request ke API...');
-      final results = await Future.wait([
-        ApiService.getPemasukan(),
-        ApiService.getPengeluaran(),
-      ]);
 
-      final pemasukan = results[0] as List<dynamic>;
-      final pengeluaran = results[1] as List<dynamic>;
 
-      print('✅ [AKTIVITAS] Data berhasil diambil:');
-      print('   - Pemasukan: ${pemasukan.length} item');
-      print('   - Pengeluaran: ${pengeluaran.length} item');
-
-      List<Map<String, dynamic>> aktivitas = [];
-
-      print('🔨 [AKTIVITAS] Memproses data pemasukan...');
-      for (var item in pemasukan) {
-        print('   📥 Pemasukan: ${item['keterangan']} - Rp ${item['jumlah']} (${item['tanggal']})');
-        aktivitas.add({
-          'title': 'Pemasukan - ${item['keterangan'] ?? 'Tidak ada keterangan'}',
-          'amount': item['jumlah'] ?? 0,
-          'type': 'pemasukan',
-          'tanggal': item['tanggal'] ?? DateTime.now().toString(),
-          'waktu': item['waktu'] ?? '',
-        });
-      }
-
-      print('🔨 [AKTIVITAS] Memproses data pengeluaran...');
-      for (var item in pengeluaran) {
-        print('   📤 Pengeluaran: ${item['keterangan']} - Rp ${item['jumlah']} (${item['tanggal']})');
-        aktivitas.add({
-          'title': 'Pengeluaran - ${item['keterangan'] ?? 'Tidak ada keterangan'}',
-          'amount': item['jumlah'] ?? 0,
-          'type': 'pengeluaran',
-          'tanggal': item['tanggal'] ?? DateTime.now().toString(),
-          'waktu': item['waktu'] ?? '',
-        });
-      }
-
-      print('📊 [AKTIVITAS] Total aktivitas sebelum sorting: ${aktivitas.length}');
-
-      print('🔄 [AKTIVITAS] Mengurutkan berdasarkan tanggal...');
-      aktivitas.sort((a, b) {
-        try {
-          DateTime dateA = DateTime.parse(a['tanggal']);
-          DateTime dateB = DateTime.parse(b['tanggal']);
-          return dateB.compareTo(dateA);
-        } catch (e) {
-          print('⚠️ [AKTIVITAS] Error parsing tanggal: $e');
-          return 0;
-        }
-      });
-
-      final result = aktivitas.take(10).toList();
-      print('✅ [AKTIVITAS] Berhasil! Menampilkan ${result.length} aktivitas terbaru');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-      
-      return result;
-    } catch (e) {
-      print('❌ [AKTIVITAS] ERROR: $e');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-      throw Exception('Gagal memuat aktivitas: $e');
+  String _normalizeDate(dynamic dateStr) {
+    if (dateStr == null) return DateTime.now().toIso8601String();
+    String s = dateStr.toString();
+    // Handle YYYY-MM-DD
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(s)) {
+      return '${s}T00:00:00';
     }
+    return s;
   }
 
-  String _formatRelativeTime(String tanggalStr) {
+  String _formatRelativeTime(dynamic date) {
     try {
-      print('🕐 [FORMAT] Memformat waktu: $tanggalStr');
-      final tanggal = DateTime.parse(tanggalStr.split(' ')[0]);
+      if (date == null) return '-';
+      
+      DateTime tanggal;
+      if (date is DateTime) {
+        tanggal = date;
+      } else if (date is String) {
+        if (date.contains('T')) {
+          tanggal = DateTime.parse(date);
+        } else {
+          tanggal = DateTime.parse(date.split(' ')[0]);
+        }
+      } else {
+        return '-';
+      }
+      
       final now = DateTime.now();
       final difference = now.difference(tanggal);
 
-      String result;
       if (difference.inDays == 0) {
         if (difference.inHours == 0) {
-          if (difference.inMinutes == 0) {
-            result = 'Baru saja';
+          if (difference.inMinutes <= 0) {
+            return 'Baru saja';
           } else {
-            result = '${difference.inMinutes} menit lalu';
+            return '${difference.inMinutes} menit lalu';
           }
         } else {
-          result = '${difference.inHours} jam lalu';
+          return '${difference.inHours} jam lalu';
         }
       } else if (difference.inDays == 1) {
-        result = '1 hari lalu';
+        return 'Kemarin';
       } else if (difference.inDays < 7) {
-        result = '${difference.inDays} hari lalu';
+        return '${difference.inDays} hari lalu';
       } else {
-        result = DateFormat('dd MMM yyyy').format(tanggal);
+        return DateFormat('dd MMM yyyy').format(tanggal);
       }
-      
-      print('   ✅ Hasil: $result');
-      return result;
     } catch (e) {
-      print('   ❌ Error format waktu: $e');
-      return 'Tidak diketahui';
+      return '-';
     }
   }
 
   String _formatCurrency(dynamic amount) {
     try {
-      print('💰 [FORMAT] Memformat currency: $amount (${amount.runtimeType})');
-      final number = amount is int ? amount : int.parse(amount.toString());
+      if (amount == null) return 'Rp 0';
+      double number;
+      if (amount is num) {
+        number = amount.toDouble();
+      } else {
+        number = double.tryParse(amount.toString()) ?? 0;
+      }
+      
       final formatter = NumberFormat.currency(
         locale: 'id_ID',
         symbol: 'Rp ',
         decimalDigits: 0,
       );
-      final result = formatter.format(number);
-      print('   ✅ Hasil: $result');
-      return result;
+      return formatter.format(number);
     } catch (e) {
       print('   ❌ Error format currency: $e');
       return 'Rp 0';
@@ -831,23 +832,43 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ],
                         ),
-                        child: FutureBuilder<Map<String, dynamic>>(
-                          future: ApiService.getLaporan(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
+                        child: Consumer<TransactionProvider>(
+                          builder: (context, provider, child) {
+                            if (provider.isLoading && provider.laporan == null) {
                               return Center(
                                 child: CircularProgressIndicator(
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               );
-                            } else if (snapshot.hasError) {
-                              return Text(
-                                'Error loading balance',
-                                style: TextStyle(color: Colors.white70),
+                            } else if (provider.error != null && provider.laporan == null) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.wifi_off_rounded, color: Colors.white70, size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Mode Offline',
+                                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 24),
+                                  Text(
+                                    'Rp ---',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 42,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: -1,
+                                    ),
+                                  ),
+                                ],
                               );
                             } else {
-                              final laporan = snapshot.data!;
-                              final saldo = _formatCurrency(laporan['saldo']);
+                              final laporan = provider.laporan!;
+                              final saldo = _formatCurrency(laporan.balance);
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -1156,97 +1177,120 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                child: FutureBuilder<Map<String, dynamic>>(
-                  future: ApiService.getLaporan(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(
-                        child: SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                  child: Consumer<TransactionProvider>(
+                    builder: (context, provider, child) {
+                      if (provider.isLoading && provider.laporan == null) {
+                        return Center(
+                          child: SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                            ),
                           ),
-                        ),
-                      );
-                    } else if (snapshot.hasError) {
-                      return Text('Gagal: ${snapshot.error}');
-                    } else {
-                      final laporan = snapshot.data!;
-                      final saldo = _formatCurrency(laporan['saldo']);
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFEFF6FF), // Blue 50
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      Icons.account_balance_wallet_rounded,
-                                      color: Color(0xFF2563EB),
-                                      size: 20,
-                                    ),
+                        );
+                      } else if (provider.error != null && provider.laporan == null) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange[50],
+                                    shape: BoxShape.circle,
                                   ),
-                                  SizedBox(width: 10),
-                                  Text(
-                                    'Total Kas OSIS',
-                                    style: TextStyle(
-                                      color: Color(0xFF64748B),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFDCFCE7),
-                                  borderRadius: BorderRadius.circular(20),
+                                  child: Icon(Icons.wifi_off_rounded, color: Colors.orange[400], size: 14),
                                 ),
-                                child: Text(
-                                  '+2.5%', // Placeholder layout
+                                SizedBox(width: 8),
+                                Text(
+                                  'Koneksi Terputus (Mode Offline)',
                                   style: TextStyle(
-                                    color: Color(0xFF16A34A),
+                                    color: Color(0xFF64748B),
                                     fontSize: 12,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                              ],
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Rp ---',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
                               ),
-                            ],
-                          ),
-                          SizedBox(height: 20),
-                          Text(
-                            saldo,
-                            style: TextStyle(
-                              color: Color(0xFF0F172A),
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
-                              height: 1.0,
                             ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now()),
-                            style: TextStyle(
-                              color: Color(0xFF94A3B8),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                            SizedBox(height: 4),
+                            Text(
+                              'Gagal memuat saldo terbaru',
+                              style: TextStyle(color: Colors.red[300], fontSize: 11),
                             ),
-                          ),
-                        ],
-                      );
-                    }
-                  },
-                ),
+                          ],
+                        );
+                      } else {
+                        final laporan = provider.laporan!;
+                        final saldo = _formatCurrency(laporan.balance);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xFFEFF6FF), // Blue 50
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        Icons.account_balance_wallet_rounded,
+                                        color: Color(0xFF2563EB),
+                                        size: 20,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      'Total Kas OSIS',
+                                      style: TextStyle(
+                                        color: Color(0xFF64748B),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 20),
+                            Text(
+                              saldo,
+                              style: TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                height: 1.0,
+                              ),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now()),
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
               ),
             ),
           ],
@@ -1435,13 +1479,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Activities List (Reusable untuk Mobile & Desktop)
   Widget _buildActivitiesList({required bool isDesktop}) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _aktivitasFuture,
-      builder: (context, snapshot) {
-        print('📱 [HOME] FutureBuilder state: ${snapshot.connectionState}');
-        
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          print('⏳ [HOME] Loading aktivitas...');
+    return Consumer<TransactionProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading && provider.combinedActivities.isEmpty) {
           return Center(
             child: Padding(
               padding: EdgeInsets.all(32),
@@ -1451,58 +1491,59 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           );
-        } else if (snapshot.hasError) {
-          print('❌ [HOME] Error di FutureBuilder: ${snapshot.error}');
+        } else if (provider.error != null && provider.combinedActivities.isEmpty) {
           return Container(
-            padding: EdgeInsets.all(20),
+            padding: EdgeInsets.all(32),
+            width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.red[100]!),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey[100]!),
             ),
-            child: Row(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: EdgeInsets.all(10),
+                  padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.blue[50],
+                    shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.error_outline_rounded,
-                    color: Colors.red[600],
-                    size: 22,
+                  child: Icon(Icons.cloud_off_rounded, color: Colors.blue[300], size: 32),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Sedang Offline',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
                   ),
                 ),
-                SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Terjadi Kesalahan',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Gagal memuat aktivitas',
-                        style: TextStyle(
-                          color: Colors.red[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                SizedBox(height: 8),
+                Text(
+                  'Gagal memuat aktivitas: ${provider.error}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: _loadAktivitas,
+                  icon: Icon(Icons.refresh_rounded, size: 18),
+                  label: Text('Coba Lagi'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.blue[700],
+                    side: BorderSide(color: Colors.blue[100]!),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ],
             ),
           );
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          print('📭 [HOME] Data aktivitas kosong');
+        } else if (provider.combinedActivities.isEmpty) {
           return Container(
             padding: EdgeInsets.all(32),
             decoration: BoxDecoration(
@@ -1545,13 +1586,11 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        final aktivitas = snapshot.data!;
-        print('✅ [HOME] Menampilkan ${aktivitas.length} aktivitas');
+        final aktivitas = provider.combinedActivities;
         
         return Column(
           children: aktivitas.map((item) {
             final isPemasukan = item['type'] == 'pemasukan';
-            print('   📌 ${isPemasukan ? "Pemasukan" : "Pengeluaran"}: ${item['title']} - ${item['amount']}');
             
             return Padding(
               padding: EdgeInsets.only(bottom: isDesktop ? 12 : 10),

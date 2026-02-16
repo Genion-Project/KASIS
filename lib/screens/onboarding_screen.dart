@@ -12,30 +12,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingPage> _pages = [
-    OnboardingPage(
-      imageIcon: Icons.groups,
-      title: 'Tim Developer',
+  final List<OnboardingPageData> _pages = [
+    OnboardingPageData(
+      icon: Icons.code_rounded,
+      title: 'TIM DEVELOPER',
       name: 'Nafil Habibi Mulyadi',
       role: 'Full Stack Developer',
-      description: 'Bertanggung jawab atas pengembangan aplikasi dan arsitektur sistem',
-      color: Colors.blue,
+      description: 'Bertanggung jawab atas arsitektur sistem dan kestabilan performa aplikasi KASIS.',
+      color: const Color(0xFF2563EB), // Modern Blue
     ),
-    OnboardingPage(
-      imageIcon: Icons.person,
-      title: 'Tim Developer',
+    OnboardingPageData(
+      icon: Icons.auto_awesome_mosaic_rounded,
+      title: 'TIM DEVELOPER',
       name: 'Muhammad Yusuf',
-      role: 'UI/UX Designer',
-      description: 'Merancang antarmuka yang user-friendly dan menarik',
-      color: Colors.purple,
+      role: 'UI/UX Designer & Backend Developer',
+      description: 'Merancang antarmuka yang intuitif dan mengelola integrasi data yang efisien.',
+      color: const Color(0xFF7C3AED), // Modern Purple
     ),
-    OnboardingPage(
-      imageIcon: Icons.person_outline,
-      title: 'Tim Developer',
+    OnboardingPageData(
+      icon: Icons.verified_rounded,
+      title: 'TIM DEVELOPER',
       name: 'Boy Cahya Madinah',
       role: 'Quality Control',
-      description: 'pengujian dan inspeksi produk untuk memastikan kesesuaian dengan standar perusahaan.',
-      color: Colors.green,
+      description: 'Menjamin kualitas setiap fitur agar sesuai dengan standar fungsionalitas aplikasi.',
+      color: const Color(0xFF059669), // Modern Green
     ),
   ];
 
@@ -51,23 +51,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     });
   }
 
-  void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      _finishOnboarding();
-    }
-  }
-
   Future<void> _finishOnboarding() async {
-    // Simpan flag bahwa user sudah melihat onboarding
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_seen_onboarding', true);
-    
-    // Navigate ke login screen
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/login');
   }
@@ -75,78 +61,184 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
+            // Header
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: _finishOnboarding,
-                  child: const Text('Lewati'),
-                ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'KASIS',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _finishOnboarding,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey.shade500,
+                    ),
+                    child: const Text(
+                      'Lewati',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ),
             ),
-            
-            // PageView untuk slides
+
+            // Sliding Content
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: _onPageChanged,
                 itemCount: _pages.length,
                 itemBuilder: (context, index) {
-                  return OnboardingPageWidget(page: _pages[index]);
+                  final page = _pages[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Professional Icon Representation
+                        Container(
+                          padding: const EdgeInsets.all(28),
+                          decoration: BoxDecoration(
+                            color: page.color.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color: page.color.withOpacity(0.1),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            page.icon,
+                            size: 64,
+                            color: page.color,
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+                        
+                        // Small Title
+                        Text(
+                          page.title,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2.5,
+                            color: page.color,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Main Name
+                        Text(
+                          page.name,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF1E293B),
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        // Clean Role Label
+                        Text(
+                          page.role,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Description
+                        Text(
+                          page.description,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade500,
+                            height: 1.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 },
               ),
             ),
-            
-            // Dots indicator
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _pages.length,
-                (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8,
-                  width: _currentPage == index ? 24 : 8,
-                  decoration: BoxDecoration(
-                    color: _currentPage == index
-                        ? Colors.blue
-                        : Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // Next/Get Started button
+
+            // Bottom Actions
             Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _nextPage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
+              child: Column(
+                children: [
+                  // Indicators
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      _pages.length,
+                      (index) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        height: 6,
+                        width: _currentPage == index ? 24 : 6,
+                        decoration: BoxDecoration(
+                          color: _currentPage == index 
+                              ? _pages[_currentPage].color 
+                              : Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
                     ),
                   ),
-                  child: Text(
-                    _currentPage == _pages.length - 1 ? 'Mulai' : 'Lanjut',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(height: 40),
+                  
+                  // Primary Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (_currentPage < _pages.length - 1) {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeOutQuart,
+                          );
+                        } else {
+                          _finishOnboarding();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _pages[_currentPage].color,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        _currentPage == _pages.length - 1 ? 'Memulai' : 'Lanjutkan',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
@@ -156,110 +248,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class OnboardingPage {
-  final IconData imageIcon;
+class OnboardingPageData {
+  final IconData icon;
   final String title;
   final String name;
   final String role;
   final String description;
   final Color color;
 
-  OnboardingPage({
-    required this.imageIcon,
+  OnboardingPageData({
+    required this.icon,
     required this.title,
     required this.name,
     required this.role,
     required this.description,
     required this.color,
   });
-}
-
-class OnboardingPageWidget extends StatelessWidget {
-  final OnboardingPage page;
-
-  const OnboardingPageWidget({super.key, required this.page});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Avatar dengan icon
-          Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: page.color,
-                width: 3,
-              ),
-            ),
-            child: Icon(
-              page.imageIcon,
-              size: 80,
-              color: page.color,
-            ),
-          ),
-          const SizedBox(height: 32),
-          
-          // Title
-          Text(
-            page.title,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-              letterSpacing: 1,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          
-          // Name
-          Text(
-            page.name,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          
-          // Role
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              page.role,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: page.color,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // Description
-          Text(
-            page.description,
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey.shade600,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 }
